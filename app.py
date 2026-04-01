@@ -135,13 +135,13 @@ def dividas():
 def adicionar_divida():
     uid = session['user_id']
     nome = request.form.get('nome', '').strip()
-    valor = float(request.form.get('valor_total', 0))
+    valor_parcela = float(request.form.get('valor_parcela', 0))
     parcelas = int(request.form.get('parcelas_total', 1))
     juros = float(request.form.get('juros_mensal', 0))
     data_inicio = request.form.get('data_inicio', date.today().isoformat())
 
-    if nome and valor > 0:
-        models.adicionar_divida(nome, valor, parcelas, juros, data_inicio, uid)
+    if nome and valor_parcela > 0:
+        models.adicionar_divida(nome, valor_parcela, parcelas, juros, data_inicio, uid)
         flash(f'Divida "{nome}" adicionada. Foco em eliminar!', 'success')
     else:
         flash('Preencha nome e valor corretamente.', 'danger')

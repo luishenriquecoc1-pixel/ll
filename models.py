@@ -96,20 +96,15 @@ def gastos_por_categoria(usuario_id=1, mes=None, ano=None):
 
 # ─── DIVIDAS ──────────────────────────────────────────────────────────
 
-def adicionar_divida(nome, valor_total, parcelas_total, juros_mensal, data_inicio, usuario_id=1):
-    if juros_mensal > 0 and parcelas_total > 0:
-        taxa = juros_mensal / 100
-        if taxa == 0:
-            valor_parcela = valor_total / parcelas_total
-        else:
-            valor_parcela = valor_total * (taxa * (1 + taxa) ** parcelas_total) / ((1 + taxa) ** parcelas_total - 1)
-    else:
-        valor_parcela = valor_total / parcelas_total if parcelas_total > 0 else valor_total
+def adicionar_divida(nome, valor_parcela, parcelas_total, juros_mensal, data_inicio, usuario_id=1):
+    """O usuario informa o valor de CADA PARCELA. O total e parcela x quantidade."""
+    valor_parcela = round(valor_parcela, 2)
+    valor_total = round(valor_parcela * parcelas_total, 2)
 
     db = get_db()
     execute(db,
             "INSERT INTO dividas (usuario_id, nome, valor_total, parcelas_total, juros_mensal, valor_parcela, data_inicio) VALUES (?, ?, ?, ?, ?, ?, ?)",
-            (usuario_id, nome, valor_total, parcelas_total, juros_mensal, round(valor_parcela, 2), data_inicio))
+            (usuario_id, nome, valor_total, parcelas_total, juros_mensal, valor_parcela, data_inicio))
     db.commit()
     db.close()
 
