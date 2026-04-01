@@ -2,7 +2,7 @@ import os
 
 DATABASE_URL = os.environ.get('DATABASE_URL', '')
 
-# Render uses "postgres://" but psycopg2 needs "postgresql://"
+# Render uses "postgres://" but psycopg needs "postgresql://"
 if DATABASE_URL.startswith('postgres://'):
     DATABASE_URL = DATABASE_URL.replace('postgres://', 'postgresql://', 1)
 
@@ -14,10 +14,9 @@ DB_PATH = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'vida.db')
 def get_db():
     """Retorna conexao com PostgreSQL (producao) ou SQLite (local)."""
     if USE_PG:
-        import psycopg2
-        import psycopg2.extras
-        conn = psycopg2.connect(DATABASE_URL)
-        conn.autocommit = False
+        import psycopg
+        from psycopg.rows import dict_row
+        conn = psycopg.connect(DATABASE_URL, row_factory=dict_row, autocommit=False)
         return conn
     else:
         import sqlite3
@@ -30,11 +29,9 @@ def get_db():
 def execute(conn, sql, params=None):
     """Executa query adaptando parametros para o banco correto."""
     if USE_PG:
-        import psycopg2.extras
-        cursor = conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
         # Convert ? to %s for PostgreSQL
         sql = sql.replace('?', '%s')
-        cursor.execute(sql, params or ())
+        cursor = conn.execute(sql, params or ())
         return cursor
     else:
         return conn.execute(sql, params or ())
@@ -43,11 +40,10 @@ def execute(conn, sql, params=None):
 def fetchall(conn, sql, params=None):
     """Executa e retorna todas as linhas como lista de dicts."""
     cursor = execute(conn, sql, params)
+    rows = cursor.fetchall()
     if USE_PG:
-        rows = cursor.fetchall()
         return [dict(r) for r in rows]
     else:
-        rows = cursor.fetchall()
         return [dict(r) for r in rows]
 
 
@@ -66,11 +62,9 @@ def fetchval(conn, sql, params=None):
     row = cursor.fetchone()
     if row is None:
         return None
-    if USE_PG:
-        # RealDictCursor returns dict
-        return list(row.values())[0] if isinstance(row, dict) else row[0]
-    else:
-        return row[0]
+    if isinstance(row, dict):
+        return list(row.values())[0]
+    return row[0]
 
 
 # ─── SQL helpers para datas (diferem entre SQLite e PG) ──────────────
@@ -107,8 +101,7 @@ def init_db():
 
 def _init_pg(conn):
     """Cria tabelas no PostgreSQL."""
-    cur = conn.cursor()
-    cur.execute('''
+    conn.execute('''
         CREATE TABLE IF NOT EXISTS usuarios (
             id SERIAL PRIMARY KEY,
             nome TEXT NOT NULL,
