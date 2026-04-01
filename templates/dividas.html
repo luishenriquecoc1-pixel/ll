@@ -1,0 +1,244 @@
+{% extends "base.html" %}
+{% block title %}Dividas{% endblock %}
+
+{% block content %}
+<div class="page-header d-flex justify-content-between align-items-start">
+    <div>
+        <h1 class="page-title"><i class="bi bi-credit-card-fill me-2"></i>Gestao de Dividas</h1>
+        <p class="text-muted">Elimine suas dividas com estrategia e disciplina</p>
+    </div>
+    <a href="{{ url_for('export_dividas_csv') }}" class="btn btn-outline-light">
+        <i class="bi bi-download me-1"></i>Exportar CSV
+    </a>
+</div>
+
+<!-- Total Dividas -->
+<div class="row g-4 mb-4">
+    <div class="col-md-4">
+        <div class="stat-card debt">
+            <div class="stat-icon"><i class="bi bi-exclamation-triangle-fill"></i></div>
+            <div class="stat-info">
+                <span class="stat-label">Total em Dividas</span>
+                <span class="stat-value">R$ {{ "%.2f"|format(total_dividas) }}</span>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-4">
+        <div class="stat-card info">
+            <div class="stat-icon"><i class="bi bi-list-ol"></i></div>
+            <div class="stat-info">
+                <span class="stat-label">Dividas Ativas</span>
+                <span class="stat-value">{{ dividas|selectattr('paga', 'equalto', 0)|list|length }}</span>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-4">
+        <div class="stat-card positive">
+            <div class="stat-icon"><i class="bi bi-check-circle-fill"></i></div>
+            <div class="stat-info">
+                <span class="stat-label">Dividas Quitadas</span>
+                <span class="stat-value">{{ dividas|selectattr('paga', 'equalto', 1)|list|length }}</span>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row g-4 mb-4">
+    <!-- Adicionar Divida -->
+    <div class="col-lg-5">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="card-title mb-0"><i class="bi bi-plus-circle me-2"></i>Adicionar Divida</h5>
+            </div>
+            <div class="card-body">
+                <form method="POST" action="{{ url_for('adicionar_divida') }}">
+                    <div class="mb-3">
+                        <label class="form-label">Nome da Divida</label>
+                        <input type="text" name="nome" class="form-control" placeholder="Ex: Cartao Nubank" required>
+                    </div>
+                    <div class="row g-3 mb-3">
+                        <div class="col-6">
+                            <label class="form-label">Valor Total (R$)</label>
+                            <input type="number" name="valor_total" class="form-control" step="0.01" min="0.01" placeholder="0.00" required>
+                        </div>
+                        <div class="col-6">
+                            <label class="form-label">Parcelas</label>
+                            <input type="number" name="parcelas_total" class="form-control" min="1" value="1" required>
+                        </div>
+                    </div>
+                    <div class="row g-3 mb-3">
+                        <div class="col-6">
+                            <label class="form-label">Juros Mensal (%)</label>
+                            <input type="number" name="juros_mensal" class="form-control" step="0.01" min="0" value="0" placeholder="0.00">
+                        </div>
+                        <div class="col-6">
+                            <label class="form-label">Data Inicio</label>
+                            <input type="date" name="data_inicio" class="form-control" value="{{ hoje if hoje is defined else '' }}">
+                        </div>
+                    </div>
+                    <button type="submit" class="btn btn-accent w-100">
+                        <i class="bi bi-plus-lg me-2"></i>Adicionar Divida
+                    </button>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <!-- Estrategia Bola de Neve -->
+    <div class="col-lg-7">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="card-title mb-0"><i class="bi bi-snow me-2"></i>Estrategia Bola de Neve</h5>
+                <small class="text-muted">Pague a menor divida primeiro para ganhar momentum</small>
+            </div>
+            <div class="card-body p-0">
+                {% if bola_neve %}
+                <div class="table-responsive">
+                    <table class="table table-dark table-hover mb-0">
+                        <thead>
+                            <tr>
+                                <th>#</th>
+                                <th>Divida</th>
+                                <th>Restante</th>
+                                <th>Parcela</th>
+                                <th>Juros</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for d in bola_neve %}
+                            <tr>
+                                <td><span class="badge bg-{{ 'success' if loop.index == 1 else 'secondary' }}">{{ loop.index }}</span></td>
+                                <td><strong>{{ d.nome }}</strong></td>
+                                <td>R$ {{ "%.2f"|format(d.saldo_restante) }}</td>
+                                <td>R$ {{ "%.2f"|format(d.valor_parcela) }}</td>
+                                <td>{{ "%.1f"|format(d.juros_mensal) }}%</td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+                {% else %}
+                <div class="text-center text-muted py-4">
+                    <i class="bi bi-emoji-smile display-4"></i>
+                    <p class="mt-2">Nenhuma divida ativa! Parabens!</p>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+
+        <!-- Estrategia Avalanche -->
+        <div class="card mt-4">
+            <div class="card-header">
+                <h5 class="card-title mb-0"><i class="bi bi-tsunami me-2"></i>Estrategia Avalanche</h5>
+                <small class="text-muted">Pague o maior juros primeiro para economizar mais</small>
+            </div>
+            <div class="card-body p-0">
+                {% if avalanche %}
+                <div class="table-responsive">
+                    <table class="table table-dark table-hover mb-0">
+                        <thead>
+                            <tr>
+                                <th>#</th>
+                                <th>Divida</th>
+                                <th>Juros</th>
+                                <th>Restante</th>
+                                <th>Parcela</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for d in avalanche %}
+                            <tr>
+                                <td><span class="badge bg-{{ 'danger' if loop.index == 1 else 'secondary' }}">{{ loop.index }}</span></td>
+                                <td><strong>{{ d.nome }}</strong></td>
+                                <td><span class="text-danger">{{ "%.1f"|format(d.juros_mensal) }}%</span></td>
+                                <td>R$ {{ "%.2f"|format(d.saldo_restante) }}</td>
+                                <td>R$ {{ "%.2f"|format(d.valor_parcela) }}</td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+                {% else %}
+                <div class="text-center text-muted py-4">
+                    <i class="bi bi-emoji-smile display-4"></i>
+                    <p class="mt-2">Sem dividas!</p>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Lista de Dividas -->
+<div class="card mb-4">
+    <div class="card-header">
+        <h5 class="card-title mb-0"><i class="bi bi-list-ul me-2"></i>Todas as Dividas</h5>
+    </div>
+    <div class="card-body p-0">
+        {% if dividas %}
+        <div class="table-responsive">
+            <table class="table table-dark table-hover mb-0">
+                <thead>
+                    <tr>
+                        <th>Nome</th>
+                        <th>Valor Total</th>
+                        <th>Pago</th>
+                        <th>Parcelas</th>
+                        <th>Juros</th>
+                        <th>Valor Parcela</th>
+                        <th>Status</th>
+                        <th>Acoes</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for d in dividas %}
+                    <tr class="{{ 'table-success' if d.paga else '' }}">
+                        <td><strong>{{ d.nome }}</strong></td>
+                        <td>R$ {{ "%.2f"|format(d.valor_total) }}</td>
+                        <td>R$ {{ "%.2f"|format(d.valor_pago) }}</td>
+                        <td>{{ d.parcelas_pagas }}/{{ d.parcelas_total }}</td>
+                        <td>{{ "%.1f"|format(d.juros_mensal) }}%</td>
+                        <td>R$ {{ "%.2f"|format(d.valor_parcela) }}</td>
+                        <td>
+                            {% if d.paga %}
+                            <span class="badge bg-success"><i class="bi bi-check-lg"></i> QUITADA</span>
+                            {% else %}
+                            {% set pct = (d.valor_pago / d.valor_total * 100) if d.valor_total > 0 else 0 %}
+                            <div class="progress" style="height: 20px;">
+                                <div class="progress-bar bg-accent" style="width: {{ pct }}%">{{ "%.0f"|format(pct) }}%</div>
+                            </div>
+                            {% endif %}
+                        </td>
+                        <td>
+                            {% if not d.paga %}
+                            <div class="btn-group btn-group-sm">
+                                <a href="{{ url_for('pagar_parcela', divida_id=d.id) }}" class="btn btn-outline-success" title="Pagar parcela">
+                                    <i class="bi bi-cash-coin"></i>
+                                </a>
+                                <a href="{{ url_for('quitar_divida', divida_id=d.id) }}" class="btn btn-outline-warning" title="Quitar toda"
+                                   onclick="return confirm('Tem certeza que deseja marcar como QUITADA?')">
+                                    <i class="bi bi-check-all"></i>
+                                </a>
+                                <a href="{{ url_for('deletar_divida', divida_id=d.id) }}" class="btn btn-outline-danger" title="Remover"
+                                   onclick="return confirm('Tem certeza?')">
+                                    <i class="bi bi-trash"></i>
+                                </a>
+                            </div>
+                            {% else %}
+                            <span class="text-success"><i class="bi bi-check-circle-fill"></i></span>
+                            {% endif %}
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        {% else %}
+        <div class="text-center text-muted py-5">
+            <i class="bi bi-emoji-sunglasses display-3"></i>
+            <p class="mt-2 fs-5">Nenhuma divida cadastrada. Otimo ou hora de registrar!</p>
+        </div>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}

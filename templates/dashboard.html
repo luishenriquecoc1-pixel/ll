@@ -1,0 +1,301 @@
+{% extends "base.html" %}
+{% block title %}Dashboard{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <h1 class="page-title"><i class="bi bi-grid-1x2-fill me-2"></i>Dashboard</h1>
+    <p class="text-muted">Visao geral do seu quartel-general | {{ hoje.strftime('%d/%m/%Y') }}</p>
+</div>
+
+<!-- Cards Principais -->
+<div class="row g-4 mb-4">
+    <div class="col-md-6 col-xl-3">
+        <div class="stat-card {{ 'positive' if saldo >= 0 else 'negative' }}">
+            <div class="stat-icon">
+                <i class="bi bi-wallet2"></i>
+            </div>
+            <div class="stat-info">
+                <span class="stat-label">Saldo do Mes</span>
+                <span class="stat-value">R$ {{ "%.2f"|format(saldo) }}</span>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-6 col-xl-3">
+        <div class="stat-card income">
+            <div class="stat-icon">
+                <i class="bi bi-arrow-up-circle-fill"></i>
+            </div>
+            <div class="stat-info">
+                <span class="stat-label">Receitas</span>
+                <span class="stat-value">R$ {{ "%.2f"|format(receitas) }}</span>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-6 col-xl-3">
+        <div class="stat-card expense">
+            <div class="stat-icon">
+                <i class="bi bi-arrow-down-circle-fill"></i>
+            </div>
+            <div class="stat-info">
+                <span class="stat-label">Gastos</span>
+                <span class="stat-value">R$ {{ "%.2f"|format(gastos_total) }}</span>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-6 col-xl-3">
+        <div class="stat-card debt">
+            <div class="stat-icon">
+                <i class="bi bi-credit-card-fill"></i>
+            </div>
+            <div class="stat-info">
+                <span class="stat-label">Dividas Restantes</span>
+                <span class="stat-value">R$ {{ "%.2f"|format(dividas) }}</span>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Progresso Tarefas + Grafico -->
+<div class="row g-4 mb-4">
+    <div class="col-lg-4">
+        <div class="card h-100">
+            <div class="card-header">
+                <h5 class="card-title mb-0"><i class="bi bi-check2-square me-2"></i>Tarefas de Hoje</h5>
+            </div>
+            <div class="card-body">
+                <!-- Progress Ring -->
+                <div class="progress-ring-container mb-3">
+                    <div class="progress-ring" style="--progress: {{ progresso.percentual }}">
+                        <span class="progress-ring-value">{{ progresso.percentual }}%</span>
+                    </div>
+                    <div class="progress-ring-label">
+                        {{ progresso.concluidas }}/{{ progresso.total }} concluidas
+                    </div>
+                </div>
+
+                {% if progresso.total == 0 %}
+                <div class="alert alert-warning mb-0">
+                    <i class="bi bi-exclamation-triangle me-2"></i>
+                    Nenhuma tarefa criada para hoje!
+                </div>
+                {% elif progresso.percentual == 100 %}
+                <div class="alert alert-success mb-0">
+                    <i class="bi bi-trophy-fill me-2"></i>
+                    Todas as tarefas concluidas! Excelente!
+                </div>
+                {% endif %}
+
+                <!-- Lista de tarefas -->
+                <div class="task-list-mini mt-3">
+                    {% for tarefa in tarefas_hoje[:5] %}
+                    <div class="task-item-mini {{ 'done' if tarefa.concluida }}">
+                        <i class="bi {{ 'bi-check-circle-fill text-success' if tarefa.concluida else 'bi-circle text-muted' }}"></i>
+                        <span>{{ tarefa.titulo }}</span>
+                    </div>
+                    {% endfor %}
+                    {% if tarefas_hoje|length > 5 %}
+                    <a href="{{ url_for('tarefas') }}" class="btn btn-sm btn-outline-light w-100 mt-2">
+                        Ver todas ({{ tarefas_hoje|length }})
+                    </a>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-lg-8">
+        <div class="card h-100">
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <h5 class="card-title mb-0"><i class="bi bi-graph-up me-2"></i>Evolucao Financeira</h5>
+                <a href="{{ url_for('evolucao') }}" class="btn btn-sm btn-outline-light">Ver detalhes</a>
+            </div>
+            <div class="card-body">
+                <canvas id="chartEvolucao" height="250"></canvas>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Gastos por Categoria + Acoes Rapidas -->
+<div class="row g-4 mb-4">
+    <div class="col-lg-5">
+        <div class="card h-100">
+            <div class="card-header">
+                <h5 class="card-title mb-0"><i class="bi bi-pie-chart-fill me-2"></i>Gastos por Categoria</h5>
+            </div>
+            <div class="card-body">
+                {% if gastos_cat %}
+                <canvas id="chartCategorias" height="250"></canvas>
+                {% else %}
+                <div class="text-center text-muted py-4">
+                    <i class="bi bi-pie-chart display-4"></i>
+                    <p class="mt-2">Nenhum gasto registrado este mes</p>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+
+    <div class="col-lg-7">
+        <!-- Alertas de Orcamento -->
+        {% set estourados = orcamentos_alerta|selectattr('estourou')|list %}
+        {% if estourados %}
+        <div class="alert alert-danger mb-3">
+            <h6 class="mb-2"><i class="bi bi-exclamation-triangle-fill me-2"></i>Orcamentos Estourados!</h6>
+            {% for orc in estourados %}
+            <div class="d-flex justify-content-between">
+                <span>{{ orc.categoria }}</span>
+                <span class="fw-bold">R$ {{ "%.2f"|format(orc.gasto_real) }} / R$ {{ "%.2f"|format(orc.limite) }} ({{ orc.percentual }}%)</span>
+            </div>
+            {% endfor %}
+        </div>
+        {% endif %}
+
+        <!-- Metas Ativas -->
+        {% if metas %}
+        <div class="card mb-3">
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <h5 class="card-title mb-0"><i class="bi bi-bullseye me-2"></i>Metas Ativas</h5>
+                <a href="{{ url_for('metas') }}" class="btn btn-sm btn-outline-light">Ver todas</a>
+            </div>
+            <div class="card-body">
+                {% for m in metas[:3] %}
+                {% set pct = (m.valor_atual / m.valor_alvo * 100) if m.valor_alvo > 0 else 0 %}
+                <div class="mb-3">
+                    <div class="d-flex justify-content-between mb-1">
+                        <span class="fw-bold">{{ m.titulo }}</span>
+                        <span class="text-muted">{{ "%.0f"|format(pct) }}%</span>
+                    </div>
+                    <div class="progress" style="height: 8px;">
+                        <div class="progress-bar {{ 'bg-success' if pct >= 80 else 'bg-warning' if pct >= 50 else 'bg-info' }}" style="width: {{ pct }}%"></div>
+                    </div>
+                    <small class="text-muted">R$ {{ "%.2f"|format(m.valor_atual) }} / R$ {{ "%.2f"|format(m.valor_alvo) }} - Prazo: {{ m.prazo }}</small>
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+        {% endif %}
+
+        <div class="card h-100">
+            <div class="card-header">
+                <h5 class="card-title mb-0"><i class="bi bi-lightning-fill me-2"></i>Acoes Rapidas</h5>
+            </div>
+            <div class="card-body">
+                <div class="row g-3">
+                    <div class="col-sm-6">
+                        <a href="{{ url_for('financeiro') }}" class="quick-action-card">
+                            <i class="bi bi-plus-circle-fill text-success"></i>
+                            <span>Adicionar Receita</span>
+                        </a>
+                    </div>
+                    <div class="col-sm-6">
+                        <a href="{{ url_for('financeiro') }}" class="quick-action-card">
+                            <i class="bi bi-dash-circle-fill text-danger"></i>
+                            <span>Registrar Gasto</span>
+                        </a>
+                    </div>
+                    <div class="col-sm-6">
+                        <a href="{{ url_for('tarefas') }}" class="quick-action-card">
+                            <i class="bi bi-plus-square-fill text-primary"></i>
+                            <span>Nova Tarefa</span>
+                        </a>
+                    </div>
+                    <div class="col-sm-6">
+                        <a href="{{ url_for('dividas') }}" class="quick-action-card">
+                            <i class="bi bi-credit-card-fill text-warning"></i>
+                            <span>Gerenciar Dividas</span>
+                        </a>
+                    </div>
+                    <div class="col-sm-6">
+                        <a href="{{ url_for('metas') }}" class="quick-action-card">
+                            <i class="bi bi-bullseye text-info"></i>
+                            <span>Metas Financeiras</span>
+                        </a>
+                    </div>
+                    <div class="col-sm-6">
+                        <a href="{{ url_for('export_completo_csv') }}" class="quick-action-card">
+                            <i class="bi bi-download text-accent"></i>
+                            <span>Exportar Relatorio</span>
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+// Evolution Chart
+const historicoData = {{ historico|tojson }};
+if (historicoData.length > 0) {
+    const labels = historicoData.map(h => {
+        const d = new Date(h.data + 'T00:00:00');
+        return d.toLocaleDateString('pt-BR', {day: '2-digit', month: '2-digit'});
+    });
+    new Chart(document.getElementById('chartEvolucao'), {
+        type: 'line',
+        data: {
+            labels: labels,
+            datasets: [
+                {
+                    label: 'Saldo',
+                    data: historicoData.map(h => h.saldo),
+                    borderColor: '#00d4aa',
+                    backgroundColor: 'rgba(0, 212, 170, 0.1)',
+                    fill: true,
+                    tension: 0.4
+                },
+                {
+                    label: 'Dividas',
+                    data: historicoData.map(h => h.total_dividas),
+                    borderColor: '#ff6b6b',
+                    backgroundColor: 'rgba(255, 107, 107, 0.1)',
+                    fill: true,
+                    tension: 0.4
+                }
+            ]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+                legend: { labels: { color: '#ccc' } }
+            },
+            scales: {
+                x: { ticks: { color: '#888' }, grid: { color: 'rgba(255,255,255,0.05)' } },
+                y: { ticks: { color: '#888', callback: v => 'R$ ' + v.toFixed(0) }, grid: { color: 'rgba(255,255,255,0.05)' } }
+            }
+        }
+    });
+}
+
+// Categorias Chart
+{% if gastos_cat %}
+const catData = {{ gastos_cat|tojson }};
+const catColors = ['#ff6b6b', '#ffd93d', '#6bcb77', '#4d96ff', '#9b59b6', '#e67e22', '#1abc9c', '#e74c3c'];
+new Chart(document.getElementById('chartCategorias'), {
+    type: 'doughnut',
+    data: {
+        labels: catData.map(c => c.categoria),
+        datasets: [{
+            data: catData.map(c => c.total),
+            backgroundColor: catColors.slice(0, catData.length),
+            borderWidth: 0
+        }]
+    },
+    options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: {
+            legend: {
+                position: 'bottom',
+                labels: { color: '#ccc', padding: 15 }
+            }
+        }
+    }
+});
+{% endif %}
+</script>
+{% endblock %}

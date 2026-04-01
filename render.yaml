@@ -1,0 +1,22 @@
+databases:
+  - name: vida-db
+    plan: free
+    databaseName: vida
+    user: vida_user
+
+services:
+  - type: web
+    name: resolvendo-minha-vida
+    runtime: python
+    plan: free
+    buildCommand: pip install -r requirements.txt
+    startCommand: gunicorn app:app
+    envVars:
+      - key: DATABASE_URL
+        fromDatabase:
+          name: vida-db
+          property: connectionString
+      - key: SECRET_KEY
+        generateValue: true
+      - key: PYTHON_VERSION
+        value: 3.11.6

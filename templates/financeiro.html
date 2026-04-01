@@ -1,0 +1,389 @@
+{% extends "base.html" %}
+{% block title %}Financeiro{% endblock %}
+
+{% block content %}
+<div class="page-header d-flex justify-content-between align-items-start">
+    <div>
+        <h1 class="page-title"><i class="bi bi-wallet-fill me-2"></i>Controle Financeiro</h1>
+        <p class="text-muted">Cada real conta. Controle total das suas financas.</p>
+    </div>
+    <div class="dropdown">
+        <button class="btn btn-outline-light dropdown-toggle" data-bs-toggle="dropdown">
+            <i class="bi bi-download me-1"></i>Exportar
+        </button>
+        <ul class="dropdown-menu dropdown-menu-end dropdown-menu-dark">
+            <li><a class="dropdown-item" href="{{ url_for('export_financeiro_csv', mes=mes, ano=ano) }}"><i class="bi bi-filetype-csv me-2"></i>Financeiro (CSV)</a></li>
+            <li><a class="dropdown-item" href="{{ url_for('export_completo_csv') }}"><i class="bi bi-file-earmark-spreadsheet me-2"></i>Relatorio Completo (CSV)</a></li>
+        </ul>
+    </div>
+</div>
+
+<!-- Filtro de Mes -->
+<div class="card mb-4">
+    <div class="card-body">
+        <form method="GET" class="row g-3 align-items-end">
+            <div class="col-auto">
+                <label class="form-label">Mes</label>
+                <select name="mes" class="form-select">
+                    {% for m in range(1, 13) %}
+                    <option value="{{ m }}" {{ 'selected' if m == mes }}>
+                        {{ ['Janeiro','Fevereiro','Marco','Abril','Maio','Junho','Julho','Agosto','Setembro','Outubro','Novembro','Dezembro'][m-1] }}
+                    </option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="col-auto">
+                <label class="form-label">Ano</label>
+                <select name="ano" class="form-select">
+                    {% for a in range(hoje.year - 2, hoje.year + 2) %}
+                    <option value="{{ a }}" {{ 'selected' if a == ano }}>{{ a }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="col-auto">
+                <button type="submit" class="btn btn-accent"><i class="bi bi-funnel me-1"></i>Filtrar</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- Resumo -->
+<div class="row g-4 mb-4">
+    <div class="col-md-4">
+        <div class="stat-card income">
+            <div class="stat-icon"><i class="bi bi-arrow-up-circle-fill"></i></div>
+            <div class="stat-info">
+                <span class="stat-label">Total Receitas</span>
+                <span class="stat-value">R$ {{ "%.2f"|format(total_receitas) }}</span>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-4">
+        <div class="stat-card expense">
+            <div class="stat-icon"><i class="bi bi-arrow-down-circle-fill"></i></div>
+            <div class="stat-info">
+                <span class="stat-label">Total Gastos</span>
+                <span class="stat-value">R$ {{ "%.2f"|format(total_gastos) }}</span>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-4">
+        <div class="stat-card {{ 'positive' if sobra >= 0 else 'negative' }}">
+            <div class="stat-icon"><i class="bi bi-piggy-bank-fill"></i></div>
+            <div class="stat-info">
+                <span class="stat-label">Sobra Mensal</span>
+                <span class="stat-value">R$ {{ "%.2f"|format(sobra) }}</span>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Orcamento Mensal por Categoria -->
+<div class="card mb-4">
+    <div class="card-header d-flex justify-content-between align-items-center">
+        <h5 class="card-title mb-0"><i class="bi bi-speedometer2 me-2"></i>Orcamento Mensal por Categoria</h5>
+        <button class="btn btn-sm btn-accent" data-bs-toggle="collapse" data-bs-target="#formOrcamento">
+            <i class="bi bi-plus-lg me-1"></i>Novo Orcamento
+        </button>
+    </div>
+    <div class="collapse" id="formOrcamento">
+        <div class="card-body border-bottom" style="border-color: var(--border-color) !important;">
+            <form method="POST" action="{{ url_for('definir_orcamento') }}" class="row g-3 align-items-end">
+                <input type="hidden" name="mes" value="{{ mes }}">
+                <input type="hidden" name="ano" value="{{ ano }}">
+                <div class="col-md-4">
+                    <label class="form-label">Categoria</label>
+                    <select name="categoria" class="form-select">
+                        <option>Alimentacao</option>
+                        <option>Moradia</option>
+                        <option>Transporte</option>
+                        <option>Saude</option>
+                        <option>Educacao</option>
+                        <option>Lazer</option>
+                        <option>Roupas</option>
+                        <option>Assinaturas</option>
+                        <option>Dividas</option>
+                        <option>Outros</option>
+                    </select>
+                </div>
+                <div class="col-md-4">
+                    <label class="form-label">Limite (R$)</label>
+                    <input type="number" name="limite" class="form-control" step="0.01" min="0.01" placeholder="0.00" required>
+                </div>
+                <div class="col-md-4">
+                    <button type="submit" class="btn btn-accent w-100"><i class="bi bi-check-lg me-1"></i>Definir Orcamento</button>
+                </div>
+            </form>
+        </div>
+    </div>
+    <div class="card-body">
+        {% if orcamentos %}
+        <div class="orcamento-list">
+            {% for orc in orcamentos %}
+            <div class="orcamento-item {{ 'estourado' if orc.estourou }}">
+                <div class="d-flex justify-content-between align-items-center mb-1">
+                    <div>
+                        <strong>{{ orc.categoria }}</strong>
+                        {% if orc.estourou %}
+                        <span class="badge bg-danger ms-2"><i class="bi bi-exclamation-triangle-fill me-1"></i>ESTOUROU!</span>
+                        {% elif orc.percentual >= 80 %}
+                        <span class="badge bg-warning ms-2"><i class="bi bi-exclamation-circle me-1"></i>Atencao</span>
+                        {% endif %}
+                    </div>
+                    <div class="d-flex align-items-center gap-2">
+                        <span class="fw-bold {{ 'text-danger' if orc.estourou else 'text-success' if orc.percentual < 80 else 'text-warning' }}">
+                            R$ {{ "%.2f"|format(orc.gasto_real) }} / R$ {{ "%.2f"|format(orc.limite) }}
+                        </span>
+                        <a href="{{ url_for('deletar_orcamento', orcamento_id=orc.id) }}" class="btn btn-sm btn-outline-danger" onclick="return confirm('Remover orcamento?')">
+                            <i class="bi bi-x-lg"></i>
+                        </a>
+                    </div>
+                </div>
+                <div class="progress" style="height: 10px;">
+                    <div class="progress-bar {{ 'bg-danger' if orc.estourou else 'bg-success' if orc.percentual < 80 else 'bg-warning' }}"
+                         style="width: {{ [orc.percentual, 100] | min }}%"></div>
+                </div>
+                <small class="text-muted">
+                    {% if orc.estourou %}
+                        Excedeu R$ {{ "%.2f"|format(-orc.restante) }} ({{ orc.percentual }}% do limite)
+                    {% else %}
+                        Restam R$ {{ "%.2f"|format(orc.restante) }} ({{ orc.percentual }}% usado)
+                    {% endif %}
+                </small>
+            </div>
+            {% endfor %}
+        </div>
+        {% else %}
+        <div class="text-center text-muted py-3">
+            <i class="bi bi-speedometer2 display-4"></i>
+            <p class="mt-2">Nenhum orcamento definido para este mes. Defina limites para controlar seus gastos!</p>
+        </div>
+        {% endif %}
+    </div>
+</div>
+
+<div class="row g-4 mb-4">
+    <!-- Adicionar Receita -->
+    <div class="col-lg-6">
+        <div class="card">
+            <div class="card-header bg-success bg-opacity-10">
+                <h5 class="card-title mb-0 text-success"><i class="bi bi-plus-circle-fill me-2"></i>Adicionar Receita</h5>
+            </div>
+            <div class="card-body">
+                <form method="POST" action="{{ url_for('adicionar_receita') }}">
+                    <div class="mb-3">
+                        <label class="form-label">Descricao</label>
+                        <input type="text" name="descricao" class="form-control" placeholder="Ex: Salario" required>
+                    </div>
+                    <div class="row g-3 mb-3">
+                        <div class="col-6">
+                            <label class="form-label">Valor (R$)</label>
+                            <input type="number" name="valor" class="form-control" step="0.01" min="0.01" placeholder="0.00" required>
+                        </div>
+                        <div class="col-6">
+                            <label class="form-label">Data</label>
+                            <input type="date" name="data" class="form-control" value="{{ hoje.isoformat() }}">
+                        </div>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Categoria</label>
+                        <select name="categoria" class="form-select">
+                            <option>Salario</option>
+                            <option>Freelance</option>
+                            <option>Investimentos</option>
+                            <option>Vendas</option>
+                            <option>Bonus</option>
+                            <option>Outros</option>
+                        </select>
+                    </div>
+                    <button type="submit" class="btn btn-success w-100">
+                        <i class="bi bi-plus-lg me-2"></i>Adicionar Receita
+                    </button>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <!-- Adicionar Gasto -->
+    <div class="col-lg-6">
+        <div class="card">
+            <div class="card-header bg-danger bg-opacity-10">
+                <h5 class="card-title mb-0 text-danger"><i class="bi bi-dash-circle-fill me-2"></i>Registrar Gasto</h5>
+            </div>
+            <div class="card-body">
+                <form method="POST" action="{{ url_for('adicionar_gasto') }}">
+                    <div class="mb-3">
+                        <label class="form-label">Descricao</label>
+                        <input type="text" name="descricao" class="form-control" placeholder="Ex: Mercado" required>
+                    </div>
+                    <div class="row g-3 mb-3">
+                        <div class="col-6">
+                            <label class="form-label">Valor (R$)</label>
+                            <input type="number" name="valor" class="form-control" step="0.01" min="0.01" placeholder="0.00" required>
+                        </div>
+                        <div class="col-6">
+                            <label class="form-label">Data</label>
+                            <input type="date" name="data" class="form-control" value="{{ hoje.isoformat() }}">
+                        </div>
+                    </div>
+                    <div class="row g-3 mb-3">
+                        <div class="col-6">
+                            <label class="form-label">Categoria</label>
+                            <select name="categoria" class="form-select">
+                                <option>Alimentacao</option>
+                                <option>Moradia</option>
+                                <option>Transporte</option>
+                                <option>Saude</option>
+                                <option>Educacao</option>
+                                <option>Lazer</option>
+                                <option>Roupas</option>
+                                <option>Assinaturas</option>
+                                <option>Dividas</option>
+                                <option>Outros</option>
+                            </select>
+                        </div>
+                        <div class="col-6">
+                            <label class="form-label">Tipo</label>
+                            <select name="tipo" class="form-select">
+                                <option value="fixo">Fixo</option>
+                                <option value="variavel" selected>Variavel</option>
+                            </select>
+                        </div>
+                    </div>
+                    <button type="submit" class="btn btn-danger w-100">
+                        <i class="bi bi-dash-lg me-2"></i>Registrar Gasto
+                    </button>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Gastos por Categoria -->
+{% if gastos_cat %}
+<div class="card mb-4">
+    <div class="card-header">
+        <h5 class="card-title mb-0"><i class="bi bi-pie-chart-fill me-2"></i>Gastos por Categoria</h5>
+    </div>
+    <div class="card-body">
+        <div class="row">
+            <div class="col-md-5">
+                <canvas id="chartGastosCat" height="250"></canvas>
+            </div>
+            <div class="col-md-7">
+                <div class="table-responsive">
+                    <table class="table table-dark table-sm">
+                        <thead><tr><th>Categoria</th><th>Total</th><th>%</th></tr></thead>
+                        <tbody>
+                            {% for g in gastos_cat %}
+                            <tr>
+                                <td>{{ g.categoria }}</td>
+                                <td>R$ {{ "%.2f"|format(g.total) }}</td>
+                                <td>{{ "%.1f"|format(g.total / total_gastos * 100 if total_gastos > 0 else 0) }}%</td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endif %}
+
+<!-- Listas -->
+<div class="row g-4 mb-4">
+    <div class="col-lg-6">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="card-title mb-0 text-success"><i class="bi bi-arrow-up me-2"></i>Receitas do Mes</h5>
+            </div>
+            <div class="card-body p-0">
+                {% if receitas %}
+                <div class="table-responsive">
+                    <table class="table table-dark table-hover mb-0">
+                        <thead><tr><th>Descricao</th><th>Categoria</th><th>Valor</th><th>Data</th><th></th></tr></thead>
+                        <tbody>
+                            {% for r in receitas %}
+                            <tr>
+                                <td>{{ r.descricao }}</td>
+                                <td><span class="badge bg-success bg-opacity-25">{{ r.categoria }}</span></td>
+                                <td class="text-success">R$ {{ "%.2f"|format(r.valor) }}</td>
+                                <td>{{ r.data }}</td>
+                                <td>
+                                    <a href="{{ url_for('deletar_receita', id=r.id) }}" class="btn btn-sm btn-outline-danger" onclick="return confirm('Remover?')">
+                                        <i class="bi bi-trash"></i>
+                                    </a>
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+                {% else %}
+                <div class="text-center text-muted py-4">Nenhuma receita neste mes</div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+    <div class="col-lg-6">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="card-title mb-0 text-danger"><i class="bi bi-arrow-down me-2"></i>Gastos do Mes</h5>
+            </div>
+            <div class="card-body p-0">
+                {% if gastos %}
+                <div class="table-responsive">
+                    <table class="table table-dark table-hover mb-0">
+                        <thead><tr><th>Descricao</th><th>Categoria</th><th>Tipo</th><th>Valor</th><th>Data</th><th></th></tr></thead>
+                        <tbody>
+                            {% for g in gastos %}
+                            <tr>
+                                <td>{{ g.descricao }}</td>
+                                <td><span class="badge bg-danger bg-opacity-25">{{ g.categoria }}</span></td>
+                                <td><span class="badge {{ 'bg-info' if g.tipo == 'fixo' else 'bg-secondary' }}">{{ g.tipo }}</span></td>
+                                <td class="text-danger">R$ {{ "%.2f"|format(g.valor) }}</td>
+                                <td>{{ g.data }}</td>
+                                <td>
+                                    <a href="{{ url_for('deletar_gasto', id=g.id) }}" class="btn btn-sm btn-outline-danger" onclick="return confirm('Remover?')">
+                                        <i class="bi bi-trash"></i>
+                                    </a>
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+                {% else %}
+                <div class="text-center text-muted py-4">Nenhum gasto neste mes</div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+{% if gastos_cat %}
+<script>
+const catData = {{ gastos_cat|tojson }};
+const catColors = ['#ff6b6b', '#ffd93d', '#6bcb77', '#4d96ff', '#9b59b6', '#e67e22', '#1abc9c', '#e74c3c', '#3498db', '#2ecc71'];
+new Chart(document.getElementById('chartGastosCat'), {
+    type: 'doughnut',
+    data: {
+        labels: catData.map(c => c.categoria),
+        datasets: [{
+            data: catData.map(c => c.total),
+            backgroundColor: catColors.slice(0, catData.length),
+            borderWidth: 0
+        }]
+    },
+    options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: { legend: { position: 'bottom', labels: { color: '#ccc', padding: 10 } } }
+    }
+});
+</script>
+{% endif %}
+{% endblock %}

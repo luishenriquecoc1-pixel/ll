@@ -1,0 +1,181 @@
+{% extends "base.html" %}
+{% block title %}Metas Financeiras{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <h1 class="page-title"><i class="bi bi-bullseye me-2"></i>Metas Financeiras</h1>
+    <p class="text-muted">Defina objetivos claros com prazo. O que nao tem prazo, nao acontece.</p>
+</div>
+
+<!-- Resumo -->
+<div class="row g-4 mb-4">
+    <div class="col-md-4">
+        <div class="stat-card info">
+            <div class="stat-icon"><i class="bi bi-flag-fill"></i></div>
+            <div class="stat-info">
+                <span class="stat-label">Metas Ativas</span>
+                <span class="stat-value">{{ metas_ativas|length }}</span>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-4">
+        <div class="stat-card positive">
+            <div class="stat-icon"><i class="bi bi-trophy-fill"></i></div>
+            <div class="stat-info">
+                <span class="stat-label">Metas Concluidas</span>
+                <span class="stat-value">{{ metas_concluidas|length }}</span>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-4">
+        <div class="stat-card warning">
+            <div class="stat-icon"><i class="bi bi-hourglass-split"></i></div>
+            <div class="stat-info">
+                <span class="stat-label">Valor Total das Metas</span>
+                <span class="stat-value">R$ {{ "%.2f"|format(metas_ativas|sum(attribute='valor_alvo')) }}</span>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row g-4 mb-4">
+    <!-- Adicionar Meta -->
+    <div class="col-lg-4">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="card-title mb-0"><i class="bi bi-plus-circle me-2"></i>Nova Meta</h5>
+            </div>
+            <div class="card-body">
+                <form method="POST" action="{{ url_for('adicionar_meta') }}">
+                    <div class="mb-3">
+                        <label class="form-label">Titulo da Meta</label>
+                        <input type="text" name="titulo" class="form-control" placeholder="Ex: Reserva de emergencia" required>
+                    </div>
+                    <div class="row g-3 mb-3">
+                        <div class="col-6">
+                            <label class="form-label">Valor Alvo (R$)</label>
+                            <input type="number" name="valor_alvo" class="form-control" step="0.01" min="0.01" placeholder="0.00" required>
+                        </div>
+                        <div class="col-6">
+                            <label class="form-label">Valor Atual (R$)</label>
+                            <input type="number" name="valor_atual" class="form-control" step="0.01" min="0" value="0" placeholder="0.00">
+                        </div>
+                    </div>
+                    <div class="row g-3 mb-3">
+                        <div class="col-6">
+                            <label class="form-label">Prazo</label>
+                            <input type="date" name="prazo" class="form-control" required>
+                        </div>
+                        <div class="col-6">
+                            <label class="form-label">Categoria</label>
+                            <select name="categoria" class="form-select">
+                                <option>Reserva de Emergencia</option>
+                                <option>Investimento</option>
+                                <option>Compra</option>
+                                <option>Viagem</option>
+                                <option>Educacao</option>
+                                <option>Quitar Divida</option>
+                                <option>Geral</option>
+                            </select>
+                        </div>
+                    </div>
+                    <button type="submit" class="btn btn-accent w-100">
+                        <i class="bi bi-flag-fill me-2"></i>Criar Meta
+                    </button>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <!-- Metas Ativas -->
+    <div class="col-lg-8">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="card-title mb-0"><i class="bi bi-flag me-2"></i>Metas em Andamento</h5>
+            </div>
+            <div class="card-body">
+                {% if metas_ativas %}
+                <div class="metas-list">
+                    {% for m in metas_ativas %}
+                    {% set pct = (m.valor_atual / m.valor_alvo * 100) if m.valor_alvo > 0 else 0 %}
+                    {% set dias_restantes = (m.prazo | replace('-','') | int - hoje.strftime('%Y%m%d') | int) %}
+                    <div class="meta-card mb-3">
+                        <div class="meta-header d-flex justify-content-between align-items-start">
+                            <div>
+                                <h5 class="mb-1">{{ m.titulo }}</h5>
+                                <span class="badge bg-info bg-opacity-25 me-2">{{ m.categoria }}</span>
+                                <span class="badge {{ 'bg-danger' if m.prazo < hoje.isoformat() else 'bg-warning' if m.prazo <= (hoje.isoformat()) else 'bg-secondary' }}">
+                                    <i class="bi bi-calendar me-1"></i>Prazo: {{ m.prazo }}
+                                </span>
+                            </div>
+                            <div class="btn-group btn-group-sm">
+                                <a href="{{ url_for('concluir_meta_route', meta_id=m.id) }}" class="btn btn-outline-success" title="Marcar concluida"
+                                   onclick="return confirm('Marcar meta como CONCLUIDA?')">
+                                    <i class="bi bi-check-lg"></i>
+                                </a>
+                                <a href="{{ url_for('deletar_meta', meta_id=m.id) }}" class="btn btn-outline-danger" title="Remover"
+                                   onclick="return confirm('Remover esta meta?')">
+                                    <i class="bi bi-trash"></i>
+                                </a>
+                            </div>
+                        </div>
+                        <div class="meta-progress mt-2">
+                            <div class="d-flex justify-content-between mb-1">
+                                <span>R$ {{ "%.2f"|format(m.valor_atual) }} de R$ {{ "%.2f"|format(m.valor_alvo) }}</span>
+                                <span class="fw-bold {{ 'text-success' if pct >= 80 else 'text-warning' if pct >= 50 else 'text-danger' }}">{{ "%.0f"|format(pct) }}%</span>
+                            </div>
+                            <div class="progress" style="height: 14px;">
+                                <div class="progress-bar {{ 'bg-success' if pct >= 80 else 'bg-warning' if pct >= 50 else 'bg-danger' }}" style="width: {{ pct }}%"></div>
+                            </div>
+                            <small class="text-muted mt-1 d-block">Falta: R$ {{ "%.2f"|format(m.valor_alvo - m.valor_atual) }}</small>
+                        </div>
+                        <!-- Update Form -->
+                        <form method="POST" action="{{ url_for('atualizar_meta', meta_id=m.id) }}" class="mt-2">
+                            <div class="input-group input-group-sm">
+                                <span class="input-group-text">R$</span>
+                                <input type="number" name="valor_atual" class="form-control" step="0.01" value="{{ "%.2f"|format(m.valor_atual) }}" placeholder="Novo valor">
+                                <button type="submit" class="btn btn-accent btn-sm">Atualizar</button>
+                            </div>
+                        </form>
+                    </div>
+                    {% endfor %}
+                </div>
+                {% else %}
+                <div class="text-center text-muted py-5">
+                    <i class="bi bi-flag display-3"></i>
+                    <p class="mt-3 fs-5">Nenhuma meta ativa. Defina seus objetivos!</p>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Metas Concluidas -->
+{% if metas_concluidas %}
+<div class="card mb-4">
+    <div class="card-header">
+        <h5 class="card-title mb-0 text-success"><i class="bi bi-trophy-fill me-2"></i>Metas Concluidas</h5>
+    </div>
+    <div class="card-body p-0">
+        <div class="table-responsive">
+            <table class="table table-dark table-hover mb-0">
+                <thead>
+                    <tr><th>Meta</th><th>Categoria</th><th>Valor</th><th>Prazo</th></tr>
+                </thead>
+                <tbody>
+                    {% for m in metas_concluidas %}
+                    <tr>
+                        <td><i class="bi bi-check-circle-fill text-success me-2"></i><strong>{{ m.titulo }}</strong></td>
+                        <td><span class="badge bg-success bg-opacity-25">{{ m.categoria }}</span></td>
+                        <td>R$ {{ "%.2f"|format(m.valor_alvo) }}</td>
+                        <td>{{ m.prazo }}</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+{% endif %}
+{% endblock %}
