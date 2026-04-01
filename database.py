@@ -1,4 +1,6 @@
 import os
+from datetime import date as date_type, datetime
+from decimal import Decimal
 
 DATABASE_URL = os.environ.get('DATABASE_URL', '')
 
@@ -9,6 +11,23 @@ if DATABASE_URL.startswith('postgres://'):
 USE_PG = bool(DATABASE_URL)
 
 DB_PATH = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'vida.db')
+
+
+def _normalize_row(row):
+    """Converte tipos PostgreSQL (date, Decimal, etc) para tipos simples."""
+    if not isinstance(row, dict):
+        return row
+    result = {}
+    for key, value in row.items():
+        if isinstance(value, date_type) and not isinstance(value, datetime):
+            result[key] = value.isoformat()
+        elif isinstance(value, datetime):
+            result[key] = value.isoformat()
+        elif isinstance(value, Decimal):
+            result[key] = float(value)
+        else:
+            result[key] = value
+    return result
 
 
 def get_db():
@@ -29,7 +48,6 @@ def get_db():
 def execute(conn, sql, params=None):
     """Executa query adaptando parametros para o banco correto."""
     if USE_PG:
-        # Convert ? to %s for PostgreSQL
         sql = sql.replace('?', '%s')
         cursor = conn.execute(sql, params or ())
         return cursor
@@ -38,22 +56,19 @@ def execute(conn, sql, params=None):
 
 
 def fetchall(conn, sql, params=None):
-    """Executa e retorna todas as linhas como lista de dicts."""
+    """Executa e retorna todas as linhas como lista de dicts normalizados."""
     cursor = execute(conn, sql, params)
     rows = cursor.fetchall()
-    if USE_PG:
-        return [dict(r) for r in rows]
-    else:
-        return [dict(r) for r in rows]
+    return [_normalize_row(dict(r)) for r in rows]
 
 
 def fetchone(conn, sql, params=None):
-    """Executa e retorna uma linha como dict (ou None)."""
+    """Executa e retorna uma linha como dict normalizado (ou None)."""
     cursor = execute(conn, sql, params)
     row = cursor.fetchone()
     if row is None:
         return None
-    return dict(row)
+    return _normalize_row(dict(row))
 
 
 def fetchval(conn, sql, params=None):
@@ -63,8 +78,12 @@ def fetchval(conn, sql, params=None):
     if row is None:
         return None
     if isinstance(row, dict):
-        return list(row.values())[0]
-    return row[0]
+        val = list(row.values())[0]
+    else:
+        val = row[0]
+    if isinstance(val, Decimal):
+        return float(val)
+    return val
 
 
 # ─── SQL helpers para datas (diferem entre SQLite e PG) ──────────────

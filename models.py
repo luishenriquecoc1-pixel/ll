@@ -203,10 +203,6 @@ def listar_tarefas(data=None, usuario_id=1):
                         "SELECT * FROM tarefas WHERE usuario_id = ? ORDER BY data DESC, concluida ASC, criado_em ASC",
                         (usuario_id,))
     db.close()
-    # Convert date objects to strings for template compatibility
-    for row in rows:
-        if isinstance(row.get('data'), date):
-            row['data'] = row['data'].isoformat()
     return rows
 
 
@@ -265,9 +261,6 @@ def historico_tarefas(usuario_id=1, dias=30):
                        ORDER BY data DESC""",
                     (usuario_id, data_inicio))
     db.close()
-    for row in rows:
-        if isinstance(row.get('data'), date):
-            row['data'] = row['data'].isoformat()
     return rows
 
 
@@ -304,9 +297,6 @@ def listar_historico(usuario_id=1, dias=90):
                     "SELECT * FROM historico WHERE usuario_id = ? AND data >= ? ORDER BY data ASC",
                     (usuario_id, data_inicio))
     db.close()
-    for row in rows:
-        if isinstance(row.get('data'), date):
-            row['data'] = row['data'].isoformat()
     return rows
 
 
@@ -355,9 +345,6 @@ def listar_metas(usuario_id=1, apenas_ativas=True):
     sql += " ORDER BY prazo ASC"
     rows = fetchall(db, sql, params)
     db.close()
-    for row in rows:
-        if isinstance(row.get('prazo'), date):
-            row['prazo'] = row['prazo'].isoformat()
     return rows
 
 
