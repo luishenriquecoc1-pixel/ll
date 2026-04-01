@@ -10,17 +10,6 @@
 <!-- Cards Principais -->
 <div class="row g-4 mb-4">
     <div class="col-md-6 col-xl-3">
-        <div class="stat-card {{ 'positive' if saldo >= 0 else 'negative' }}">
-            <div class="stat-icon">
-                <i class="bi bi-wallet2"></i>
-            </div>
-            <div class="stat-info">
-                <span class="stat-label">Saldo do Mes</span>
-                <span class="stat-value">R$ {{ "%.2f"|format(saldo) }}</span>
-            </div>
-        </div>
-    </div>
-    <div class="col-md-6 col-xl-3">
         <div class="stat-card income">
             <div class="stat-icon">
                 <i class="bi bi-arrow-up-circle-fill"></i>
@@ -48,8 +37,21 @@
                 <i class="bi bi-credit-card-fill"></i>
             </div>
             <div class="stat-info">
-                <span class="stat-label">Dividas Restantes</span>
-                <span class="stat-value">R$ {{ "%.2f"|format(dividas) }}</span>
+                <span class="stat-label">Parcelas do Mes</span>
+                <span class="stat-value">R$ {{ "%.2f"|format(parcelas_mes) }}</span>
+                <small class="text-muted">Total restante: R$ {{ "%.2f"|format(dividas_total) }}</small>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-6 col-xl-3">
+        <div class="stat-card {{ 'positive' if sobra_real >= 0 else 'negative' }}">
+            <div class="stat-icon">
+                <i class="bi bi-piggy-bank-fill"></i>
+            </div>
+            <div class="stat-info">
+                <span class="stat-label">Sobra Real</span>
+                <span class="stat-value">R$ {{ "%.2f"|format(sobra_real) }}</span>
+                <small class="text-muted">Receitas - Gastos - Parcelas</small>
             </div>
         </div>
     </div>

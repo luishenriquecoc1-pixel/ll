@@ -82,7 +82,9 @@ def dashboard():
     receitas = models.total_receitas_mes(uid)
     gastos = models.total_gastos_mes(uid)
     saldo = receitas - gastos
-    dividas = models.total_dividas(uid)
+    dividas_total = models.total_dividas(uid)
+    parcelas_mes = models.total_parcelas_mes(uid)
+    sobra_real = receitas - gastos - parcelas_mes
     prog = models.progresso_tarefas(hoje.isoformat(), uid)
     tarefas_hoje = models.listar_tarefas(hoje.isoformat(), uid)
     gastos_cat = models.gastos_por_categoria(uid)
@@ -99,7 +101,9 @@ def dashboard():
                            saldo=saldo,
                            receitas=receitas,
                            gastos_total=gastos,
-                           dividas=dividas,
+                           dividas_total=dividas_total,
+                           parcelas_mes=parcelas_mes,
+                           sobra_real=sobra_real,
                            progresso=prog,
                            tarefas_hoje=tarefas_hoje,
                            gastos_cat=gastos_cat,

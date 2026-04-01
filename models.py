@@ -157,8 +157,18 @@ def deletar_divida(divida_id):
 
 
 def total_dividas(usuario_id=1):
+    """Total restante de todas as dividas ativas."""
     db = get_db()
     val = fetchval(db, "SELECT COALESCE(SUM(valor_total - valor_pago), 0) FROM dividas WHERE usuario_id = ? AND paga = 0",
+                   (usuario_id,))
+    db.close()
+    return val or 0
+
+
+def total_parcelas_mes(usuario_id=1):
+    """Soma das parcelas mensais de todas as dividas ativas (quanto paga por mes)."""
+    db = get_db()
+    val = fetchval(db, "SELECT COALESCE(SUM(valor_parcela), 0) FROM dividas WHERE usuario_id = ? AND paga = 0",
                    (usuario_id,))
     db.close()
     return val or 0
