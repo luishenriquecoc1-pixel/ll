@@ -436,12 +436,190 @@ def deletar_orcamento(orcamento_id):
     db.close()
 
 
+# ─── RECOMPENSAS ──────────────────────────────────────────────────────
+
+def saldo_recompensa(usuario_id=1):
+    """Calcula saldo de pontos disponivel para recompensas."""
+    db = get_db()
+    ganhos = fetchval(db,
+                      "SELECT COALESCE(SUM(pontos), 0) FROM pontos_log WHERE usuario_id = ? AND tipo = 'ganho'",
+                      (usuario_id,))
+    gastos = fetchval(db,
+                      "SELECT COALESCE(SUM(pontos), 0) FROM pontos_log WHERE usuario_id = ? AND tipo = 'gasto'",
+                      (usuario_id,))
+    db.close()
+    return (ganhos or 0) - (gastos or 0)
+
+
+def total_pontos_ganhos(usuario_id=1):
+    db = get_db()
+    val = fetchval(db,
+                   "SELECT COALESCE(SUM(pontos), 0) FROM pontos_log WHERE usuario_id = ? AND tipo = 'ganho'",
+                   (usuario_id,))
+    db.close()
+    return val or 0
+
+
+def adicionar_pontos(descricao, pontos, usuario_id=1):
+    db = get_db()
+    execute(db,
+            "INSERT INTO pontos_log (usuario_id, descricao, pontos, tipo, data) VALUES (?, ?, ?, 'ganho', ?)",
+            (usuario_id, descricao, pontos, date.today().isoformat()))
+    db.commit()
+    db.close()
+
+
+def remover_pontos(descricao, pontos, usuario_id=1):
+    db = get_db()
+    execute(db,
+            "INSERT INTO pontos_log (usuario_id, descricao, pontos, tipo, data) VALUES (?, ?, ?, 'gasto', ?)",
+            (usuario_id, descricao, pontos, date.today().isoformat()))
+    db.commit()
+    db.close()
+
+
+def historico_pontos(usuario_id=1, limite=50):
+    db = get_db()
+    rows = fetchall(db,
+                    "SELECT * FROM pontos_log WHERE usuario_id = ? ORDER BY criado_em DESC LIMIT ?",
+                    (usuario_id, limite))
+    db.close()
+    return rows
+
+
+def adicionar_recompensa(nome, custo, nivel, usuario_id=1):
+    db = get_db()
+    execute(db,
+            "INSERT INTO recompensas (usuario_id, nome, custo, nivel) VALUES (?, ?, ?, ?)",
+            (usuario_id, nome, custo, nivel))
+    db.commit()
+    db.close()
+
+
+def listar_recompensas(usuario_id=1, apenas_disponiveis=False):
+    db = get_db()
+    sql = "SELECT * FROM recompensas WHERE usuario_id = ?"
+    params = [usuario_id]
+    if apenas_disponiveis:
+        sql += " AND desbloqueada = 0"
+    sql += " ORDER BY desbloqueada ASC, custo ASC"
+    rows = fetchall(db, sql, params)
+    db.close()
+    return rows
+
+
+def desbloquear_recompensa(recompensa_id, usuario_id=1):
+    """Desbloqueia recompensa se tiver saldo suficiente e condicoes OK."""
+    db = get_db()
+    rec = fetchone(db, "SELECT * FROM recompensas WHERE id = ? AND usuario_id = ?",
+                   (recompensa_id, usuario_id))
+    if not rec or rec['desbloqueada']:
+        db.close()
+        return False, 'Recompensa nao encontrada ou ja desbloqueada.'
+
+    saldo = saldo_recompensa(usuario_id)
+    if saldo < rec['custo']:
+        db.close()
+        return False, f'Saldo insuficiente. Voce tem R$ {saldo:.2f} mas precisa de R$ {rec["custo"]:.2f}.'
+
+    # Desbloqueia
+    execute(db, "UPDATE recompensas SET desbloqueada = 1, data_desbloqueio = ? WHERE id = ?",
+            (datetime.now().isoformat(), recompensa_id))
+    db.commit()
+    db.close()
+
+    # Registra gasto de pontos
+    remover_pontos(f'Recompensa: {rec["nome"]}', rec['custo'], usuario_id)
+    return True, f'Recompensa "{rec["nome"]}" desbloqueada!'
+
+
+def deletar_recompensa(recompensa_id):
+    db = get_db()
+    execute(db, "DELETE FROM recompensas WHERE id = ?", (recompensa_id,))
+    db.commit()
+    db.close()
+
+
+def adicionar_conquista(titulo, descricao, icone, usuario_id=1):
+    db = get_db()
+    execute(db,
+            "INSERT INTO conquistas (usuario_id, titulo, descricao, icone, data_conquista) VALUES (?, ?, ?, ?, ?)",
+            (usuario_id, titulo, descricao, icone, date.today().isoformat()))
+    db.commit()
+    db.close()
+
+
+def listar_conquistas(usuario_id=1):
+    db = get_db()
+    rows = fetchall(db, "SELECT * FROM conquistas WHERE usuario_id = ? ORDER BY data_conquista DESC",
+                    (usuario_id,))
+    db.close()
+    return rows
+
+
+def calcular_nivel(total_pontos):
+    """Retorna nivel e progresso baseado no total de pontos ganhos."""
+    niveis = [
+        (0, 'Iniciante', 100),
+        (100, 'Disciplinado', 300),
+        (300, 'Focado', 600),
+        (600, 'Determinado', 1000),
+        (1000, 'Guerreiro', 2000),
+        (2000, 'Estrategista', 4000),
+        (4000, 'Mestre', 7000),
+        (7000, 'Lenda', 10000),
+        (10000, 'Imortal', 999999),
+    ]
+    nivel_atual = niveis[0]
+    proximo = niveis[1] if len(niveis) > 1 else None
+    for i, (min_pts, nome, prox_pts) in enumerate(niveis):
+        if total_pontos >= min_pts:
+            nivel_atual = (i + 1, nome, min_pts)
+            proximo = niveis[i + 1] if i + 1 < len(niveis) else None
+    nivel_num = nivel_atual[0]
+    nivel_nome = nivel_atual[1]
+    pts_inicio = nivel_atual[2]
+    if proximo:
+        pts_fim = proximo[0]
+        progresso = round(((total_pontos - pts_inicio) / (pts_fim - pts_inicio)) * 100)
+        progresso = min(progresso, 100)
+    else:
+        pts_fim = pts_inicio
+        progresso = 100
+    return {
+        'numero': nivel_num,
+        'nome': nivel_nome,
+        'pontos_atual': total_pontos,
+        'pontos_proximo': pts_fim,
+        'progresso': progresso
+    }
+
+
+def verificar_condicoes_recompensa(usuario_id=1):
+    """Verifica se o usuario pode gastar recompensas (contas pagas, meta minima)."""
+    hoje = date.today()
+    receitas = total_receitas_mes(usuario_id)
+    gastos = total_gastos_mes(usuario_id)
+    parcelas = total_parcelas_mes(usuario_id)
+    sobra = receitas - gastos - parcelas
+
+    problemas = []
+    if sobra < 0:
+        problemas.append('Suas despesas + parcelas superam suas receitas este mes.')
+    prog = progresso_tarefas(hoje.isoformat(), usuario_id)
+    if prog['total'] > 0 and prog['percentual'] < 50:
+        problemas.append(f'Menos de 50% das tarefas de hoje concluidas ({prog["percentual"]}%).')
+
+    return len(problemas) == 0, problemas
+
+
 # ─── RESET ────────────────────────────────────────────────────────────
 
 def resetar_tudo(usuario_id=1):
     db = get_db()
     tabelas = ['receitas', 'gastos', 'dividas', 'tarefas', 'historico',
-               'regras_disciplina', 'metas', 'orcamentos']
+               'regras_disciplina', 'metas', 'orcamentos',
+               'recompensas', 'conquistas', 'pontos_log']
     for tabela in tabelas:
         execute(db, f"DELETE FROM {tabela} WHERE usuario_id = ?", (usuario_id,))
     db.commit()

@@ -220,6 +220,37 @@ def _init_pg(conn):
             ano INTEGER NOT NULL,
             criado_em TIMESTAMP DEFAULT CURRENT_TIMESTAMP
         );
+
+        CREATE TABLE IF NOT EXISTS recompensas (
+            id SERIAL PRIMARY KEY,
+            usuario_id INTEGER NOT NULL DEFAULT 1 REFERENCES usuarios(id),
+            nome TEXT NOT NULL,
+            custo REAL NOT NULL,
+            nivel TEXT DEFAULT 'rapida',
+            desbloqueada INTEGER DEFAULT 0,
+            data_desbloqueio TIMESTAMP,
+            criado_em TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        );
+
+        CREATE TABLE IF NOT EXISTS conquistas (
+            id SERIAL PRIMARY KEY,
+            usuario_id INTEGER NOT NULL DEFAULT 1 REFERENCES usuarios(id),
+            titulo TEXT NOT NULL,
+            descricao TEXT,
+            icone TEXT DEFAULT 'trophy',
+            data_conquista DATE NOT NULL,
+            criado_em TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        );
+
+        CREATE TABLE IF NOT EXISTS pontos_log (
+            id SERIAL PRIMARY KEY,
+            usuario_id INTEGER NOT NULL DEFAULT 1 REFERENCES usuarios(id),
+            descricao TEXT NOT NULL,
+            pontos REAL NOT NULL,
+            tipo TEXT DEFAULT 'ganho',
+            data DATE NOT NULL,
+            criado_em TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        );
     ''')
 
     _insert_defaults(conn)
@@ -332,6 +363,40 @@ def _init_sqlite(conn):
             limite REAL NOT NULL,
             mes INTEGER NOT NULL,
             ano INTEGER NOT NULL,
+            criado_em TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            FOREIGN KEY (usuario_id) REFERENCES usuarios(id)
+        );
+
+        CREATE TABLE IF NOT EXISTS recompensas (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            usuario_id INTEGER NOT NULL DEFAULT 1,
+            nome TEXT NOT NULL,
+            custo REAL NOT NULL,
+            nivel TEXT DEFAULT 'rapida',
+            desbloqueada INTEGER DEFAULT 0,
+            data_desbloqueio TIMESTAMP,
+            criado_em TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            FOREIGN KEY (usuario_id) REFERENCES usuarios(id)
+        );
+
+        CREATE TABLE IF NOT EXISTS conquistas (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            usuario_id INTEGER NOT NULL DEFAULT 1,
+            titulo TEXT NOT NULL,
+            descricao TEXT,
+            icone TEXT DEFAULT 'trophy',
+            data_conquista DATE NOT NULL,
+            criado_em TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            FOREIGN KEY (usuario_id) REFERENCES usuarios(id)
+        );
+
+        CREATE TABLE IF NOT EXISTS pontos_log (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            usuario_id INTEGER NOT NULL DEFAULT 1,
+            descricao TEXT NOT NULL,
+            pontos REAL NOT NULL,
+            tipo TEXT DEFAULT 'ganho',
+            data DATE NOT NULL,
             criado_em TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
             FOREIGN KEY (usuario_id) REFERENCES usuarios(id)
         );

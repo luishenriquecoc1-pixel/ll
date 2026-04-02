@@ -500,6 +500,97 @@ body {
     border-color: rgba(255, 255, 255, 0.1);
 }
 
+/* ─── REWARD CARDS ────────────────────────────────────────────────── */
+.reward-card {
+    background: rgba(255, 255, 255, 0.02);
+    border: 1px solid var(--border-color);
+    border-radius: 12px;
+    padding: 1rem;
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+    transition: all 0.2s;
+    border-left: 4px solid var(--text-secondary);
+}
+
+.reward-card:hover {
+    background: rgba(255, 255, 255, 0.04);
+    transform: translateY(-2px);
+}
+
+.reward-card.rapida { border-left-color: #6bcb77; }
+.reward-card.media { border-left-color: #ffd93d; }
+.reward-card.grande { border-left-color: #ff6b6b; }
+
+.reward-card.desbloqueada {
+    opacity: 0.6;
+    border-left-color: var(--positive);
+    background: rgba(0, 212, 170, 0.05);
+}
+
+.reward-icon {
+    font-size: 1.5rem;
+}
+
+.reward-card.rapida .reward-icon { color: #6bcb77; }
+.reward-card.media .reward-icon { color: #ffd93d; }
+.reward-card.grande .reward-icon { color: #ff6b6b; }
+
+.reward-info h6 { font-weight: 700; }
+
+.reward-cost {
+    font-weight: 800;
+    font-size: 1.1rem;
+    color: var(--accent);
+    margin-right: 0.5rem;
+}
+
+.reward-actions {
+    display: flex;
+    align-items: center;
+    gap: 0.25rem;
+    margin-top: 0.25rem;
+}
+
+/* ─── CONQUISTAS ──────────────────────────────────────────────────── */
+.conquistas-grid {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.75rem;
+}
+
+.conquista-badge {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    text-align: center;
+    padding: 1rem;
+    background: rgba(255, 217, 61, 0.05);
+    border: 1px solid rgba(255, 217, 61, 0.2);
+    border-radius: 12px;
+    min-width: 120px;
+    gap: 0.25rem;
+}
+
+.conquista-icon {
+    font-size: 1.8rem;
+    color: #ffd93d;
+}
+
+.conquista-badge strong {
+    font-size: 0.82rem;
+}
+
+.conquista-badge small {
+    font-size: 0.72rem;
+    color: var(--text-secondary);
+}
+
+.conquista-date {
+    font-size: 0.68rem;
+    color: var(--text-secondary);
+}
+
 /* ─── RULES LIST (DISCIPLINA) ─────────────────────────────────────── */
 .rules-list {
     display: flex;

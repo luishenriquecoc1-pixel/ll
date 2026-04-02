@@ -397,6 +397,109 @@ def deletar_meta(meta_id):
     return redirect(url_for('metas'))
 
 
+# ─── RECOMPENSAS ──────────────────────────────────────────────────────
+
+@app.route('/recompensas')
+@login_required
+def recompensas():
+    uid = session['user_id']
+    saldo = models.saldo_recompensa(uid)
+    total_ganhos = models.total_pontos_ganhos(uid)
+    nivel = models.calcular_nivel(total_ganhos)
+    recompensas_lista = models.listar_recompensas(uid)
+    conquistas = models.listar_conquistas(uid)
+    historico = models.historico_pontos(uid, 30)
+    pode_gastar, problemas = models.verificar_condicoes_recompensa(uid)
+
+    return render_template('recompensas.html',
+                           saldo=saldo,
+                           total_ganhos=total_ganhos,
+                           nivel=nivel,
+                           recompensas=recompensas_lista,
+                           conquistas=conquistas,
+                           historico_pontos=historico,
+                           pode_gastar=pode_gastar,
+                           problemas=problemas)
+
+
+@app.route('/recompensas/pontos', methods=['POST'])
+@login_required
+def adicionar_pontos():
+    uid = session['user_id']
+    descricao = request.form.get('descricao', '').strip()
+    pontos = float(request.form.get('pontos', 0))
+    if descricao and pontos > 0:
+        models.adicionar_pontos(descricao, pontos, uid)
+        flash(f'+R$ {pontos:.2f} de recompensa! Continue assim!', 'success')
+    else:
+        flash('Preencha descricao e valor.', 'danger')
+    return redirect(url_for('recompensas'))
+
+
+@app.route('/recompensas/penalidade', methods=['POST'])
+@login_required
+def adicionar_penalidade():
+    uid = session['user_id']
+    descricao = request.form.get('descricao', '').strip()
+    pontos = float(request.form.get('pontos', 0))
+    if descricao and pontos > 0:
+        models.remover_pontos(f'Penalidade: {descricao}', pontos, uid)
+        flash(f'-R$ {pontos:.2f} de penalidade. Fique atento!', 'warning')
+    else:
+        flash('Preencha descricao e valor.', 'danger')
+    return redirect(url_for('recompensas'))
+
+
+@app.route('/recompensas/adicionar', methods=['POST'])
+@login_required
+def adicionar_recompensa():
+    uid = session['user_id']
+    nome = request.form.get('nome', '').strip()
+    custo = float(request.form.get('custo', 0))
+    nivel = request.form.get('nivel', 'rapida')
+    if nome and custo > 0:
+        models.adicionar_recompensa(nome, custo, nivel, uid)
+        flash(f'Recompensa "{nome}" criada!', 'success')
+    else:
+        flash('Preencha nome e custo.', 'danger')
+    return redirect(url_for('recompensas'))
+
+
+@app.route('/recompensas/desbloquear/<int:rec_id>')
+@login_required
+def desbloquear_recompensa(rec_id):
+    uid = session['user_id']
+    pode, problemas = models.verificar_condicoes_recompensa(uid)
+    if not pode:
+        flash('Bloqueado! ' + ' '.join(problemas), 'danger')
+        return redirect(url_for('recompensas'))
+
+    ok, msg = models.desbloquear_recompensa(rec_id, uid)
+    flash(msg, 'success' if ok else 'danger')
+    return redirect(url_for('recompensas'))
+
+
+@app.route('/recompensas/deletar/<int:rec_id>')
+@login_required
+def deletar_recompensa(rec_id):
+    models.deletar_recompensa(rec_id)
+    flash('Recompensa removida.', 'info')
+    return redirect(url_for('recompensas'))
+
+
+@app.route('/recompensas/conquista', methods=['POST'])
+@login_required
+def adicionar_conquista():
+    uid = session['user_id']
+    titulo = request.form.get('titulo', '').strip()
+    descricao = request.form.get('descricao', '').strip()
+    icone = request.form.get('icone', 'trophy')
+    if titulo:
+        models.adicionar_conquista(titulo, descricao, icone, uid)
+        flash(f'Conquista "{titulo}" registrada!', 'success')
+    return redirect(url_for('recompensas'))
+
+
 # ─── EVOLUCAO ─────────────────────────────────────────────────────────
 
 @app.route('/evolucao')

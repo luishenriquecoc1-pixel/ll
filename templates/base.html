@@ -52,6 +52,12 @@
                 </a>
             </li>
             <li class="nav-item">
+                <a class="nav-link {% if request.endpoint == 'recompensas' %}active{% endif %}" href="{{ url_for('recompensas') }}">
+                    <i class="bi bi-gem"></i>
+                    <span>Recompensas</span>
+                </a>
+            </li>
+            <li class="nav-item">
                 <a class="nav-link {% if request.endpoint == 'evolucao' %}active{% endif %}" href="{{ url_for('evolucao') }}">
                     <i class="bi bi-graph-up-arrow"></i>
                     <span>Evolucao</span>
