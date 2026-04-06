@@ -135,10 +135,10 @@ def dividas():
 def adicionar_divida():
     uid = session['user_id']
     nome = request.form.get('nome', '').strip()
-    valor_parcela = float(request.form.get('valor_parcela', 0))
-    parcelas = int(request.form.get('parcelas_total', 1))
-    juros = float(request.form.get('juros_mensal', 0))
-    data_inicio = request.form.get('data_inicio', date.today().isoformat())
+    valor_parcela = float(request.form.get('valor_parcela', 0) or 0)
+    parcelas = int(request.form.get('parcelas_total', 1) or 1)
+    juros = float(request.form.get('juros_mensal', 0) or 0)
+    data_inicio = request.form.get('data_inicio', date.today().isoformat()) or date.today().isoformat()
 
     if nome and valor_parcela > 0:
         models.adicionar_divida(nome, valor_parcela, parcelas, juros, data_inicio, uid)
@@ -399,6 +399,56 @@ def deletar_meta(meta_id):
 
 # ─── RECOMPENSAS ──────────────────────────────────────────────────────
 
+# Tabelas pre-programadas
+ACOES_PONTOS = {
+    'parcela_paga': {'desc': 'Paguei uma parcela de divida', 'pontos': 15, 'xp': 15},
+    'divida_quitada': {'desc': 'Quitei uma divida completa', 'pontos': 100, 'xp': 100},
+    'tarefas_dia': {'desc': 'Cumpri todas as tarefas do dia', 'pontos': 10, 'xp': 10},
+    '7_dias_tarefas': {'desc': '7 dias seguidos cumprindo tarefas', 'pontos': 50, 'xp': 50},
+    'mes_sem_impulso': {'desc': 'Mes inteiro sem gastos por impulso', 'pontos': 80, 'xp': 80},
+    'guardou_100': {'desc': 'Guardei R$100+ este mes', 'pontos': 20, 'xp': 20},
+    'meta_batida': {'desc': 'Bati uma meta de economia', 'pontos': 30, 'xp': 30},
+    '30_dias_disciplina': {'desc': '30 dias de disciplina total', 'pontos': 150, 'xp': 150},
+    'sem_atraso_mes': {'desc': 'Mes sem atrasar nenhum pagamento', 'pontos': 40, 'xp': 40},
+    'primeira_receita': {'desc': 'Registrei minha primeira receita', 'pontos': 5, 'xp': 5},
+}
+
+PENALIDADES = {
+    'impulso_pequeno': {'desc': 'Compra por impulso (pequena)', 'pontos': 10},
+    'impulso_grande': {'desc': 'Compra por impulso (grande)', 'pontos': 30},
+    'nao_cumpriu_tarefas': {'desc': 'Nao cumpriu tarefas do dia', 'pontos': 5},
+    'divida_nova': {'desc': 'Fez divida nova', 'pontos': 50},
+    'atrasou_pagamento': {'desc': 'Atrasou um pagamento', 'pontos': 20},
+    'gastou_alem': {'desc': 'Estourou orcamento de categoria', 'pontos': 15},
+}
+
+RECOMPENSAS_CATALOGO = [
+    {'nome': 'Lanche especial', 'custo': 15, 'nivel': 'rapida', 'icone': 'cup-hot'},
+    {'nome': 'Assinar algo por 1 mes', 'custo': 20, 'nivel': 'rapida', 'icone': 'play-circle'},
+    {'nome': 'Compra pequena que queria', 'custo': 30, 'nivel': 'rapida', 'icone': 'bag'},
+    {'nome': 'Delivery especial', 'custo': 25, 'nivel': 'rapida', 'icone': 'bicycle'},
+    {'nome': 'Roupa nova', 'custo': 50, 'nivel': 'media', 'icone': 'handbag'},
+    {'nome': 'Jantar fora', 'custo': 40, 'nivel': 'media', 'icone': 'egg-fried'},
+    {'nome': 'Role elaborado', 'custo': 60, 'nivel': 'media', 'icone': 'music-note-beamed'},
+    {'nome': 'Presente pra si mesmo', 'custo': 70, 'nivel': 'media', 'icone': 'gift'},
+    {'nome': 'Viagem curta', 'custo': 200, 'nivel': 'grande', 'icone': 'airplane'},
+    {'nome': 'Celular / Eletronico', 'custo': 300, 'nivel': 'grande', 'icone': 'phone'},
+    {'nome': 'Viagem dos sonhos', 'custo': 500, 'nivel': 'grande', 'icone': 'globe-americas'},
+]
+
+CONQUISTAS_CATALOGO = [
+    {'titulo': 'Primeira divida quitada', 'desc': 'Quitou a primeira divida!', 'icone': 'trophy'},
+    {'titulo': '30 dias sem impulso', 'desc': 'Um mes inteiro sem gastar por impulso', 'icone': 'shield'},
+    {'titulo': 'Guardou R$1000', 'desc': 'Acumulou R$1000 em economia', 'icone': 'gem'},
+    {'titulo': 'Todas as dividas pagas', 'desc': 'Zerou todas as dividas!', 'icone': 'star'},
+    {'titulo': '7 dias de foco total', 'desc': 'Uma semana cumprindo 100% das tarefas', 'icone': 'fire'},
+    {'titulo': 'Level Up!', 'desc': 'Subiu de nivel no sistema', 'icone': 'lightning'},
+    {'titulo': 'Primeiro mes organizado', 'desc': 'Completou o primeiro mes usando o sistema', 'icone': 'rocket'},
+    {'titulo': 'Meta financeira batida', 'desc': 'Atingiu uma meta financeira', 'icone': 'bullseye'},
+    {'titulo': '100 dias de disciplina', 'desc': 'Centenario de consistencia!', 'icone': 'crown'},
+]
+
+
 @app.route('/recompensas')
 @login_required
 def recompensas():
@@ -419,49 +469,60 @@ def recompensas():
                            conquistas=conquistas,
                            historico_pontos=historico,
                            pode_gastar=pode_gastar,
-                           problemas=problemas)
+                           problemas=problemas,
+                           acoes_pontos=ACOES_PONTOS,
+                           penalidades=PENALIDADES,
+                           catalogo_recompensas=RECOMPENSAS_CATALOGO,
+                           catalogo_conquistas=CONQUISTAS_CATALOGO)
 
 
-@app.route('/recompensas/pontos', methods=['POST'])
+@app.route('/recompensas/acao/<acao_id>')
 @login_required
-def adicionar_pontos():
+def executar_acao(acao_id):
     uid = session['user_id']
-    descricao = request.form.get('descricao', '').strip()
-    pontos = float(request.form.get('pontos', 0))
-    if descricao and pontos > 0:
-        models.adicionar_pontos(descricao, pontos, uid)
-        flash(f'+R$ {pontos:.2f} de recompensa! Continue assim!', 'success')
+    acao = ACOES_PONTOS.get(acao_id)
+    if acao:
+        models.adicionar_pontos(acao['desc'], acao['pontos'], uid)
+        flash(f'+R$ {acao["pontos"]:.2f} | {acao["desc"]}', 'success')
     else:
-        flash('Preencha descricao e valor.', 'danger')
+        flash('Acao nao encontrada.', 'danger')
     return redirect(url_for('recompensas'))
 
 
-@app.route('/recompensas/penalidade', methods=['POST'])
+@app.route('/recompensas/penalidade/<pen_id>')
 @login_required
-def adicionar_penalidade():
+def executar_penalidade(pen_id):
     uid = session['user_id']
-    descricao = request.form.get('descricao', '').strip()
-    pontos = float(request.form.get('pontos', 0))
-    if descricao and pontos > 0:
-        models.remover_pontos(f'Penalidade: {descricao}', pontos, uid)
-        flash(f'-R$ {pontos:.2f} de penalidade. Fique atento!', 'warning')
+    pen = PENALIDADES.get(pen_id)
+    if pen:
+        models.remover_pontos(f'Penalidade: {pen["desc"]}', pen['pontos'], uid)
+        flash(f'-R$ {pen["pontos"]:.2f} | {pen["desc"]}', 'warning')
     else:
-        flash('Preencha descricao e valor.', 'danger')
+        flash('Penalidade nao encontrada.', 'danger')
     return redirect(url_for('recompensas'))
 
 
-@app.route('/recompensas/adicionar', methods=['POST'])
+@app.route('/recompensas/adicionar/<int:catalogo_idx>')
 @login_required
-def adicionar_recompensa():
+def adicionar_recompensa_catalogo(catalogo_idx):
     uid = session['user_id']
-    nome = request.form.get('nome', '').strip()
-    custo = float(request.form.get('custo', 0))
-    nivel = request.form.get('nivel', 'rapida')
-    if nome and custo > 0:
-        models.adicionar_recompensa(nome, custo, nivel, uid)
-        flash(f'Recompensa "{nome}" criada!', 'success')
-    else:
-        flash('Preencha nome e custo.', 'danger')
+    if 0 <= catalogo_idx < len(RECOMPENSAS_CATALOGO):
+        r = RECOMPENSAS_CATALOGO[catalogo_idx]
+        models.adicionar_recompensa(r['nome'], r['custo'], r['nivel'], uid)
+        flash(f'Recompensa "{r["nome"]}" adicionada a sua lista!', 'success')
+    return redirect(url_for('recompensas'))
+
+
+@app.route('/recompensas/conquista/<int:catalogo_idx>')
+@login_required
+def registrar_conquista_catalogo(catalogo_idx):
+    uid = session['user_id']
+    if 0 <= catalogo_idx < len(CONQUISTAS_CATALOGO):
+        c = CONQUISTAS_CATALOGO[catalogo_idx]
+        models.adicionar_conquista(c['titulo'], c['desc'], c['icone'], uid)
+        # Bonus points for achievements
+        models.adicionar_pontos(f'Conquista: {c["titulo"]}', 25, uid)
+        flash(f'Conquista "{c["titulo"]}" registrada! +R$25.00 de bonus!', 'success')
     return redirect(url_for('recompensas'))
 
 
@@ -487,17 +548,6 @@ def deletar_recompensa(rec_id):
     return redirect(url_for('recompensas'))
 
 
-@app.route('/recompensas/conquista', methods=['POST'])
-@login_required
-def adicionar_conquista():
-    uid = session['user_id']
-    titulo = request.form.get('titulo', '').strip()
-    descricao = request.form.get('descricao', '').strip()
-    icone = request.form.get('icone', 'trophy')
-    if titulo:
-        models.adicionar_conquista(titulo, descricao, icone, uid)
-        flash(f'Conquista "{titulo}" registrada!', 'success')
-    return redirect(url_for('recompensas'))
 
 
 # ─── EVOLUCAO ─────────────────────────────────────────────────────────

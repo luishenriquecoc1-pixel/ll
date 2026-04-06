@@ -14,8 +14,7 @@
         <i class="bi bi-lock-fill display-6"></i>
         <div>
             <h5 class="mb-1">RECOMPENSAS TRAVADAS</h5>
-            <p class="mb-0">Voce so pode desbloquear recompensas quando:</p>
-            <ul class="mb-0 mt-1">
+            <ul class="mb-0">
                 {% for p in problemas %}
                 <li>{{ p }}</li>
                 {% endfor %}
@@ -25,7 +24,7 @@
 </div>
 {% endif %}
 
-<!-- Topo: Saldo + Nivel + Stats -->
+<!-- Topo: Saldo + Nivel + Conquistas -->
 <div class="row g-4 mb-4">
     <div class="col-md-4">
         <div class="stat-card {{ 'positive' if saldo > 0 else 'info' }}">
@@ -33,7 +32,7 @@
             <div class="stat-info">
                 <span class="stat-label">Saldo de Recompensa</span>
                 <span class="stat-value">R$ {{ "%.2f"|format(saldo) }}</span>
-                <small class="text-muted">Disponivel para gastar</small>
+                <small class="text-muted">Disponivel para desbloquear</small>
             </div>
         </div>
     </div>
@@ -41,12 +40,12 @@
         <div class="stat-card info">
             <div class="stat-icon"><i class="bi bi-star-fill"></i></div>
             <div class="stat-info">
-                <span class="stat-label">Nivel {{ nivel.numero }}</span>
+                <span class="stat-label">Level {{ nivel.numero }}</span>
                 <span class="stat-value">{{ nivel.nome }}</span>
                 <div class="progress mt-1" style="height: 8px;">
                     <div class="progress-bar bg-accent" style="width: {{ nivel.progresso }}%"></div>
                 </div>
-                <small class="text-muted">R$ {{ "%.0f"|format(total_ganhos) }} / R$ {{ "%.0f"|format(nivel.pontos_proximo) }}</small>
+                <small class="text-muted">R$ {{ "%.0f"|format(total_ganhos) }} / R$ {{ "%.0f"|format(nivel.pontos_proximo) }} para proximo nivel</small>
             </div>
         </div>
     </div>
@@ -62,115 +61,79 @@
     </div>
 </div>
 
-<div class="row g-4 mb-4">
-    <!-- Ganhar Pontos -->
-    <div class="col-lg-6">
-        <div class="card">
-            <div class="card-header bg-success bg-opacity-10">
-                <h5 class="card-title mb-0 text-success"><i class="bi bi-plus-circle-fill me-2"></i>Ganhar Pontos</h5>
-            </div>
-            <div class="card-body">
-                <form method="POST" action="{{ url_for('adicionar_pontos') }}">
-                    <div class="mb-2">
-                        <label class="form-label">Motivo</label>
-                        <select name="descricao" class="form-select">
-                            <option>Guardei dinheiro este mes</option>
-                            <option>Paguei parcela de divida</option>
-                            <option>Quitei uma divida completa</option>
-                            <option>Cumpri todas as tarefas do dia</option>
-                            <option>Cumpri 7 dias seguidos de tarefas</option>
-                            <option>Mes sem gastos por impulso</option>
-                            <option>Bati meta de economia</option>
-                            <option>30 dias de disciplina</option>
-                        </select>
-                    </div>
-                    <div class="mb-2">
-                        <label class="form-label">Valor da recompensa (R$)</label>
-                        <input type="number" name="pontos" class="form-control" step="0.01" min="0.01" placeholder="Ex: 10.00" required>
-                    </div>
-                    <small class="text-muted d-block mb-2">
-                        Sugestao: R$10 por meta cumprida, R$50 por divida quitada, 10% do que economizou
-                    </small>
-                    <button type="submit" class="btn btn-success w-100"><i class="bi bi-plus-lg me-1"></i>Adicionar Pontos</button>
-                </form>
-            </div>
-        </div>
+<!-- GANHAR PONTOS (botoes automaticos) -->
+<div class="card mb-4">
+    <div class="card-header bg-success bg-opacity-10">
+        <h5 class="card-title mb-0 text-success"><i class="bi bi-plus-circle-fill me-2"></i>Ganhar Pontos - Selecione o que voce fez</h5>
     </div>
-
-    <!-- Penalidade -->
-    <div class="col-lg-6">
-        <div class="card">
-            <div class="card-header bg-danger bg-opacity-10">
-                <h5 class="card-title mb-0 text-danger"><i class="bi bi-dash-circle-fill me-2"></i>Penalidade (Gasto por impulso)</h5>
+    <div class="card-body">
+        <div class="row g-2">
+            {% for key, acao in acoes_pontos.items() %}
+            <div class="col-md-6 col-lg-4">
+                <a href="{{ url_for('executar_acao', acao_id=key) }}" class="action-btn ganho"
+                   onclick="return confirm('Confirmar: {{ acao.desc }}?  (+R$ {{ '%.2f'|format(acao.pontos) }})')">
+                    <div class="action-pts text-success">+R$ {{ "%.2f"|format(acao.pontos) }}</div>
+                    <div class="action-desc">{{ acao.desc }}</div>
+                </a>
             </div>
-            <div class="card-body">
-                <form method="POST" action="{{ url_for('adicionar_penalidade') }}">
-                    <div class="mb-2">
-                        <label class="form-label">O que aconteceu?</label>
-                        <input type="text" name="descricao" class="form-control" placeholder="Ex: Comprei roupa sem planejar" required>
-                    </div>
-                    <div class="mb-2">
-                        <label class="form-label">Valor perdido (R$)</label>
-                        <input type="number" name="pontos" class="form-control" step="0.01" min="0.01" placeholder="0.00" required>
-                    </div>
-                    <small class="text-muted d-block mb-2">
-                        Honestidade e o caminho. Registrar a penalidade te mantem no controle.
-                    </small>
-                    <button type="submit" class="btn btn-danger w-100"><i class="bi bi-dash-lg me-1"></i>Aplicar Penalidade</button>
-                </form>
-            </div>
+            {% endfor %}
         </div>
     </div>
 </div>
 
-<!-- Criar Recompensa -->
+<!-- PENALIDADES (botoes automaticos) -->
+<div class="card mb-4">
+    <div class="card-header bg-danger bg-opacity-10">
+        <h5 class="card-title mb-0 text-danger"><i class="bi bi-exclamation-triangle-fill me-2"></i>Penalidades - Seja honesto consigo</h5>
+    </div>
+    <div class="card-body">
+        <div class="row g-2">
+            {% for key, pen in penalidades.items() %}
+            <div class="col-md-6 col-lg-4">
+                <a href="{{ url_for('executar_penalidade', pen_id=key) }}" class="action-btn penalidade"
+                   onclick="return confirm('Aplicar penalidade: {{ pen.desc }}?  (-R$ {{ '%.2f'|format(pen.pontos) }})')">
+                    <div class="action-pts text-danger">-R$ {{ "%.2f"|format(pen.pontos) }}</div>
+                    <div class="action-desc">{{ pen.desc }}</div>
+                </a>
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+</div>
+
+<!-- SUAS RECOMPENSAS (desbloqueio) -->
 <div class="card mb-4">
     <div class="card-header d-flex justify-content-between align-items-center">
         <h5 class="card-title mb-0"><i class="bi bi-gift me-2"></i>Suas Recompensas</h5>
-        <button class="btn btn-sm btn-accent" data-bs-toggle="collapse" data-bs-target="#formRecompensa">
-            <i class="bi bi-plus-lg me-1"></i>Nova Recompensa
+        <button class="btn btn-sm btn-accent" data-bs-toggle="collapse" data-bs-target="#catalogoRecompensas">
+            <i class="bi bi-plus-lg me-1"></i>Adicionar do Catalogo
         </button>
     </div>
-    <div class="collapse" id="formRecompensa">
+
+    <!-- Catalogo de recompensas para adicionar -->
+    <div class="collapse" id="catalogoRecompensas">
         <div class="card-body border-bottom" style="border-color: var(--border-color) !important;">
-            <form method="POST" action="{{ url_for('adicionar_recompensa') }}" class="row g-3 align-items-end">
-                <div class="col-md-4">
-                    <label class="form-label">Nome da recompensa</label>
-                    <input type="text" name="nome" class="form-control" placeholder="Ex: Jantar fora" required>
+            <p class="text-muted mb-2">Clique para adicionar a sua lista:</p>
+            <div class="row g-2">
+                {% for r in catalogo_recompensas %}
+                <div class="col-md-4 col-lg-3">
+                    <a href="{{ url_for('adicionar_recompensa_catalogo', catalogo_idx=loop.index0) }}" class="action-btn catalogo {{ r.nivel }}">
+                        <i class="bi bi-{{ r.icone }} me-1"></i>
+                        <div class="action-desc">{{ r.nome }}</div>
+                        <div class="action-pts">R$ {{ "%.2f"|format(r.custo) }}</div>
+                    </a>
                 </div>
-                <div class="col-md-3">
-                    <label class="form-label">Custo (R$)</label>
-                    <input type="number" name="custo" class="form-control" step="0.01" min="0.01" placeholder="30.00" required>
-                </div>
-                <div class="col-md-3">
-                    <label class="form-label">Nivel</label>
-                    <select name="nivel" class="form-select">
-                        <option value="rapida">Rapida (baixo custo)</option>
-                        <option value="media">Media</option>
-                        <option value="grande">Grande (alto custo)</option>
-                    </select>
-                </div>
-                <div class="col-md-2">
-                    <button type="submit" class="btn btn-accent w-100">Criar</button>
-                </div>
-            </form>
+                {% endfor %}
+            </div>
         </div>
     </div>
+
     <div class="card-body">
         {% if recompensas %}
         <div class="row g-3">
             {% for r in recompensas %}
             <div class="col-md-6 col-lg-4">
                 <div class="reward-card {{ 'desbloqueada' if r.desbloqueada }} {{ r.nivel }}">
-                    <div class="reward-icon">
-                        {% if r.nivel == 'rapida' %}
-                        <i class="bi bi-emoji-smile-fill"></i>
-                        {% elif r.nivel == 'media' %}
-                        <i class="bi bi-star-fill"></i>
-                        {% else %}
-                        <i class="bi bi-gem"></i>
-                        {% endif %}
-                    </div>
                     <div class="reward-info">
                         <h6 class="mb-1">{{ r.nome }}</h6>
                         <span class="reward-cost">R$ {{ "%.2f"|format(r.custo) }}</span>
@@ -180,21 +143,19 @@
                     </div>
                     <div class="reward-actions">
                         {% if r.desbloqueada %}
-                        <span class="badge bg-success"><i class="bi bi-unlock-fill me-1"></i>Desbloqueada!</span>
-                        {% else %}
-                        {% if pode_gastar and saldo >= r.custo %}
+                        <span class="badge bg-success fs-6"><i class="bi bi-unlock-fill me-1"></i>Desbloqueada!</span>
+                        {% elif pode_gastar and saldo >= r.custo %}
                         <a href="{{ url_for('desbloquear_recompensa', rec_id=r.id) }}" class="btn btn-sm btn-accent"
-                           onclick="return confirm('Desbloquear {{r.nome}} por R$ {{ '%.2f'|format(r.custo) }}?')">
+                           onclick="return confirm('Desbloquear {{ r.nome }} por R$ {{ '%.2f'|format(r.custo) }}?')">
                             <i class="bi bi-unlock me-1"></i>Desbloquear
                         </a>
                         {% elif not pode_gastar %}
                         <span class="badge bg-danger"><i class="bi bi-lock-fill me-1"></i>Travado</span>
                         {% else %}
-                        <span class="badge bg-secondary"><i class="bi bi-coin me-1"></i>Saldo insuficiente</span>
-                        {% endif %}
+                        <span class="badge bg-secondary">Faltam R$ {{ "%.2f"|format(r.custo - saldo) }}</span>
                         {% endif %}
                         <a href="{{ url_for('deletar_recompensa', rec_id=r.id) }}" class="btn btn-sm btn-outline-danger ms-1"
-                           onclick="return confirm('Remover?')"><i class="bi bi-trash"></i></a>
+                           onclick="return confirm('Remover?')"><i class="bi bi-x-lg"></i></a>
                     </div>
                 </div>
             </div>
@@ -203,49 +164,39 @@
         {% else %}
         <div class="text-center text-muted py-4">
             <i class="bi bi-gift display-3"></i>
-            <p class="mt-2">Nenhuma recompensa criada. Defina o que voce quer conquistar!</p>
+            <p class="mt-2">Nenhuma recompensa na lista. Clique em "Adicionar do Catalogo" acima!</p>
         </div>
         {% endif %}
     </div>
 </div>
 
-<!-- Conquistas -->
+<!-- CONQUISTAS -->
 <div class="card mb-4">
     <div class="card-header d-flex justify-content-between align-items-center">
         <h5 class="card-title mb-0"><i class="bi bi-trophy-fill me-2"></i>Conquistas</h5>
-        <button class="btn btn-sm btn-outline-warning" data-bs-toggle="collapse" data-bs-target="#formConquista">
+        <button class="btn btn-sm btn-outline-warning" data-bs-toggle="collapse" data-bs-target="#catalogoConquistas">
             <i class="bi bi-plus-lg me-1"></i>Registrar Conquista
         </button>
     </div>
-    <div class="collapse" id="formConquista">
+
+    <div class="collapse" id="catalogoConquistas">
         <div class="card-body border-bottom" style="border-color: var(--border-color) !important;">
-            <form method="POST" action="{{ url_for('adicionar_conquista') }}" class="row g-3 align-items-end">
-                <div class="col-md-4">
-                    <label class="form-label">Titulo</label>
-                    <input type="text" name="titulo" class="form-control" placeholder="Ex: Primeira divida quitada" required>
+            <p class="text-muted mb-2">Clique para registrar (+R$ 25.00 de bonus por conquista):</p>
+            <div class="row g-2">
+                {% for c in catalogo_conquistas %}
+                <div class="col-md-4 col-lg-3">
+                    <a href="{{ url_for('registrar_conquista_catalogo', catalogo_idx=loop.index0) }}" class="action-btn conquista"
+                       onclick="return confirm('Registrar conquista: {{ c.titulo }}?')">
+                        <i class="bi bi-{{ c.icone }}-fill conquista-ico"></i>
+                        <div class="action-desc">{{ c.titulo }}</div>
+                        <small class="text-muted">+R$ 25.00</small>
+                    </a>
                 </div>
-                <div class="col-md-4">
-                    <label class="form-label">Descricao</label>
-                    <input type="text" name="descricao" class="form-control" placeholder="Ex: Quitei o cartao Nubank">
-                </div>
-                <div class="col-md-2">
-                    <label class="form-label">Icone</label>
-                    <select name="icone" class="form-select">
-                        <option value="trophy">Trofeu</option>
-                        <option value="star">Estrela</option>
-                        <option value="fire">Fogo</option>
-                        <option value="lightning">Raio</option>
-                        <option value="shield">Escudo</option>
-                        <option value="gem">Diamante</option>
-                        <option value="rocket">Foguete</option>
-                    </select>
-                </div>
-                <div class="col-md-2">
-                    <button type="submit" class="btn btn-warning w-100">Registrar</button>
-                </div>
-            </form>
+                {% endfor %}
+            </div>
         </div>
     </div>
+
     <div class="card-body">
         {% if conquistas %}
         <div class="conquistas-grid">
@@ -258,6 +209,8 @@
                     {% elif c.icone == 'shield' %}<i class="bi bi-shield-fill-check"></i>
                     {% elif c.icone == 'gem' %}<i class="bi bi-gem"></i>
                     {% elif c.icone == 'rocket' %}<i class="bi bi-rocket-takeoff-fill"></i>
+                    {% elif c.icone == 'bullseye' %}<i class="bi bi-bullseye"></i>
+                    {% elif c.icone == 'crown' %}<i class="bi bi-award-fill"></i>
                     {% else %}<i class="bi bi-trophy-fill"></i>
                     {% endif %}
                 </div>
@@ -269,7 +222,7 @@
         </div>
         {% else %}
         <div class="text-center text-muted py-3">
-            <p>Nenhuma conquista ainda. Suas vitorias serao registradas aqui!</p>
+            <p>Nenhuma conquista ainda. Clique em "Registrar Conquista" quando alcancar algo!</p>
         </div>
         {% endif %}
     </div>

@@ -500,6 +500,70 @@ body {
     border-color: rgba(255, 255, 255, 0.1);
 }
 
+/* ─── ACTION BUTTONS (RECOMPENSAS) ────────────────────────────────── */
+.action-btn {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    text-align: center;
+    gap: 0.25rem;
+    padding: 0.75rem;
+    background: rgba(255, 255, 255, 0.02);
+    border: 1px solid var(--border-color);
+    border-radius: 10px;
+    text-decoration: none;
+    color: var(--text-primary);
+    transition: all 0.2s;
+    cursor: pointer;
+    min-height: 70px;
+    justify-content: center;
+}
+
+.action-btn:hover {
+    transform: translateY(-2px);
+    color: var(--text-primary);
+}
+
+.action-btn.ganho:hover {
+    background: rgba(0, 212, 170, 0.1);
+    border-color: var(--positive);
+}
+
+.action-btn.penalidade:hover {
+    background: rgba(255, 107, 107, 0.1);
+    border-color: var(--negative);
+}
+
+.action-btn.catalogo:hover {
+    background: rgba(77, 150, 255, 0.1);
+    border-color: var(--info);
+}
+
+.action-btn.catalogo.rapida:hover { border-color: #6bcb77; }
+.action-btn.catalogo.media:hover { border-color: #ffd93d; }
+.action-btn.catalogo.grande:hover { border-color: #ff6b6b; }
+
+.action-btn.conquista:hover {
+    background: rgba(255, 217, 61, 0.1);
+    border-color: #ffd93d;
+}
+
+.action-btn .conquista-ico {
+    font-size: 1.3rem;
+    color: #ffd93d;
+}
+
+.action-pts {
+    font-weight: 800;
+    font-size: 0.95rem;
+}
+
+.action-desc {
+    font-size: 0.82rem;
+    color: var(--text-secondary);
+    line-height: 1.2;
+}
+
 /* ─── REWARD CARDS ────────────────────────────────────────────────── */
 .reward-card {
     background: rgba(255, 255, 255, 0.02);
