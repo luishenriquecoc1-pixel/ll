@@ -132,29 +132,15 @@ def pagar_parcela(divida_id):
             novo_valor_pago = divida['valor_total']
         execute(db, "UPDATE dividas SET parcelas_pagas = ?, valor_pago = ?, paga = ? WHERE id = ?",
                 (novas_pagas, round(novo_valor_pago, 2), paga, divida_id))
-        # Registra como gasto automaticamente
-        execute(db,
-                "INSERT INTO gastos (usuario_id, descricao, valor, categoria, tipo, data) VALUES (?, ?, ?, 'Dividas', 'fixo', ?)",
-                (divida['usuario_id'], f"Parcela {novas_pagas}/{divida['parcelas_total']} - {divida['nome']}",
-                 divida['valor_parcela'], date.today().isoformat()))
         db.commit()
     db.close()
 
 
 def marcar_divida_paga(divida_id):
     db = get_db()
-    divida = fetchone(db, "SELECT * FROM dividas WHERE id = ?", (divida_id,))
-    if divida:
-        restante = divida['valor_total'] - divida['valor_pago']
-        execute(db, "UPDATE dividas SET paga = 1, valor_pago = valor_total, parcelas_pagas = parcelas_total WHERE id = ?",
-                (divida_id,))
-        # Registra o valor restante como gasto
-        if restante > 0:
-            execute(db,
-                    "INSERT INTO gastos (usuario_id, descricao, valor, categoria, tipo, data) VALUES (?, ?, ?, 'Dividas', 'fixo', ?)",
-                    (divida['usuario_id'], f"Quitacao total - {divida['nome']}",
-                     round(restante, 2), date.today().isoformat()))
-        db.commit()
+    execute(db, "UPDATE dividas SET paga = 1, valor_pago = valor_total, parcelas_pagas = parcelas_total WHERE id = ?",
+            (divida_id,))
+    db.commit()
     db.close()
 
 
