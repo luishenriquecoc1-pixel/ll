@@ -802,7 +802,18 @@ def api_historico():
 # ─── INIT ─────────────────────────────────────────────────────────────
 
 # Sempre inicializa o banco (necessario para gunicorn no Render)
-init_db()
+import time as _time
+for _attempt in range(3):
+    try:
+        init_db()
+        print(f"[OK] Banco inicializado (tentativa {_attempt + 1})")
+        break
+    except Exception as e:
+        print(f"[ERRO] init_db tentativa {_attempt + 1}: {e}")
+        if _attempt < 2:
+            _time.sleep(2)
+        else:
+            print("[AVISO] Banco nao inicializado, continuando mesmo assim...")
 
 if __name__ == '__main__':
     app.run(debug=True, port=5000)
